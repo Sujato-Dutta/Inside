@@ -79,7 +79,7 @@ export interface AskAnswer {
     isPositive?: boolean;
   }[];
   chart?: {
-    type: "bar" | "line" | "pie";
+    type: "bar" | "line" | "pie" | "donut" | "scatter";
     title: string;
     data: Record<string, string | number>[];
     xKey?: string;
@@ -97,6 +97,7 @@ export interface AskAnswer {
     metric: string;
   }[];
   suggestedActions?: string[];
+  followUps?: string[];
   filterDescription?: string;
   sourceDataset?: string;
 }

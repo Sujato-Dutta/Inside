@@ -12,7 +12,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 export function UseCases() {
   const [activeTab, setActiveTab] = useState(0);

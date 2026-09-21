@@ -1,15 +1,19 @@
 import { StudentRecord, ColumnMapping } from "@/types/student-data";
 
 // Known column aliases for intelligent educational mapping
-const COLUMN_SYNONYMS: Record<string, string[]> = {
+const COLUMN_SYNONYMS: Partial<Record<keyof StudentRecord, string[]>> = {
   id: ["pupil id", "student id", "id", "student_id", "pupil_id", "candidate number", "roll no", "admission number"],
   name: ["student name", "pupil name", "name", "full name", "student_name", "first and last name"],
   yearGroup: ["year", "year group", "year_group", "grade", "cohort", "nc year"],
+  classGroup: ["class", "section", "classgroup", "class section", "form", "tutor group"],
   attendanceRate: ["attendance", "attendance %", "attendance rate", "attendance_rate", "attnd %", "overall attendance", "att %"],
   mathGrade: ["math", "maths", "mathematics", "numeracy", "algebra", "math_grade", "math score"],
   englishGrade: ["english", "eng", "english lang", "english lit", "literacy", "english_grade", "english score"],
   scienceGrade: ["science", "sci", "combined science", "physics", "chemistry", "biology", "science_grade"],
   senStatus: ["sen", "send", "special needs", "sen status", "sen_status", "iep", "ehcp"],
+  inclusionSend: ["inclusion", "send category", "inclusion_send", "sen type", "primary need"],
+  emiratiStatus: ["emirati", "emirati_status", "national", "uae national"],
+  ealStatus: ["eal", "eal_status", "english additional language"],
   pupilPremium: ["pupil premium", "pp", "disadvantaged", "fsm", "free school meals", "pupil_premium"],
   gender: ["gender", "sex"],
   riskLevel: ["risk", "risk level", "support tier", "status", "risk_level"],
@@ -30,10 +34,10 @@ function cleanKey(str: string): string {
 }
 
 // Map detected header to standard canonical key
-export function detectColumnMapping(header: string): { key: string; confidence: number } {
+export function detectColumnMapping(header: string): { key: keyof StudentRecord | "ignore"; confidence: number } {
   const cleaned = cleanKey(header);
 
-  for (const [canonical, synonyms] of Object.entries(COLUMN_SYNONYMS)) {
+  for (const [canonical, synonyms] of Object.entries(COLUMN_SYNONYMS) as [keyof StudentRecord, string[]][]) {
     if (synonyms.some((s) => s === cleaned || cleaned.includes(s) || s.includes(cleaned))) {
       const exact = synonyms.includes(cleaned);
       return { key: canonical, confidence: exact ? 98 : 88 };
@@ -109,14 +113,18 @@ export function parseSpreadsheetInBrowser(fileContent: string, fileName: string)
     let id = `STU-${1000 + rowIdx + 1}`;
     let name = `Student ${rowIdx + 1}`;
     let yearGroup = 10;
+    let classGroup = "10A";
     let attendanceRate = 92.0;
     let mathGrade = 6.0;
     let englishGrade = 6.0;
     let scienceGrade = 6.0;
     let senStatus = false;
+    let inclusionSend: string | undefined = undefined;
+    let emiratiStatus: boolean | undefined = undefined;
+    let ealStatus: boolean | undefined = undefined;
     let pupilPremium = false;
-    let gender = "U";
-    let riskLevel: "low" | "medium" | "high" = "low";
+    let gender: "Male" | "Female" | "Other" = "Other";
+    let riskLevel: "Low" | "Moderate" | "High" = "Low";
 
     row.forEach((cell, colIdx) => {
       const mapping = mappings[colIdx]?.mappedTo;
@@ -139,6 +147,10 @@ export function parseSpreadsheetInBrowser(fileContent: string, fileName: string)
           if (!isNaN(num) && num >= 1 && num <= 14) yearGroup = num;
           break;
         }
+
+        case "classGroup":
+          if (trimmed) classGroup = trimmed;
+          break;
 
         case "attendanceRate": {
           const cleanedNum = parseFloat(trimmed.replace(/%/g, ""));
@@ -174,21 +186,41 @@ export function parseSpreadsheetInBrowser(fileContent: string, fileName: string)
           break;
         }
 
+        case "inclusionSend":
+          if (trimmed && trimmed.toLowerCase() !== "none") inclusionSend = trimmed;
+          break;
+
+        case "emiratiStatus": {
+          const lower = trimmed.toLowerCase();
+          emiratiStatus = lower === "true" || lower === "yes" || lower === "1";
+          break;
+        }
+
+        case "ealStatus": {
+          const lower = trimmed.toLowerCase();
+          ealStatus = lower === "true" || lower === "yes" || lower === "1";
+          break;
+        }
+
         case "pupilPremium": {
           const lower = trimmed.toLowerCase();
           pupilPremium = lower === "true" || lower === "yes" || lower === "pp" || lower === "fsm";
           break;
         }
 
-        case "gender":
-          gender = trimmed.toUpperCase().charAt(0) || "U";
+        case "gender": {
+          const g = trimmed.toLowerCase();
+          if (g.startsWith("m")) gender = "Male";
+          else if (g.startsWith("f")) gender = "Female";
+          else gender = "Other";
           break;
+        }
 
         case "riskLevel": {
           const lower = trimmed.toLowerCase();
-          if (lower.includes("high") || lower.includes("intervention")) riskLevel = "high";
-          else if (lower.includes("med") || lower.includes("monitor")) riskLevel = "medium";
-          else riskLevel = "low";
+          if (lower.includes("high") || lower.includes("intervention")) riskLevel = "High";
+          else if (lower.includes("med") || lower.includes("mod") || lower.includes("monitor")) riskLevel = "Moderate";
+          else riskLevel = "Low";
           break;
         }
       }
@@ -196,22 +228,29 @@ export function parseSpreadsheetInBrowser(fileContent: string, fileName: string)
 
     // Auto-calculate risk if not explicitly provided
     if (attendanceRate < 85 || mathGrade < 4 || englishGrade < 4) {
-      riskLevel = "high";
+      riskLevel = "High";
     } else if (attendanceRate < 90 || mathGrade < 5 || englishGrade < 5) {
-      riskLevel = "medium";
+      riskLevel = "Moderate";
     }
+
+    const overallScore = Math.round(((mathGrade + englishGrade + scienceGrade) / 3) * 10) / 10;
 
     records.push({
       id,
       name,
+      gender,
       yearGroup,
+      classGroup,
       attendanceRate,
       mathGrade,
       englishGrade,
       scienceGrade,
+      overallScore,
       senStatus,
+      inclusionSend,
+      emiratiStatus,
+      ealStatus,
       pupilPremium,
-      gender,
       riskLevel,
     });
   });

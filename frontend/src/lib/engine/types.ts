@@ -25,7 +25,7 @@ export interface QueryIntent {
 export interface KPIMetric {
   label: string;
   value: string;
-  change?: string | null;
+  change?: string;
   isPositive?: boolean;
 }
 
@@ -82,4 +82,25 @@ export interface ReportCalculation {
   keyMetrics: { label: string; value: string; status: string }[];
   breakdown: { label: string; value: number; count: number }[];
   recommendations: string[];
+}
+
+export interface RubricIndicator {
+  name: string;
+  category: string;
+  calculatedValue: number;
+  unit: string;
+  band: string;
+  bandIndex: number; // 0=Outstanding ... 5=Very Weak
+  formula: string;
+  numerator: number;
+  denominator: number;
+  description: string;
+}
+
+export interface InspectionRubric {
+  indicators: RubricIndicator[];
+  overallBand: string;
+  overallBandIndex: number;
+  timestamp: string;
+  studentCount: number;
 }

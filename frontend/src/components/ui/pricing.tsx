@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   Tooltip,
   TooltipContent,
@@ -36,7 +36,7 @@ export interface Plan {
 
 export interface PricingSectionProps extends React.ComponentProps<"div"> {
   plans: Plan[];
-  heading: string;
+  heading: React.ReactNode;
   description?: string;
 }
 

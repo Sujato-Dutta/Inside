@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { StudentRecord, UploadedFileMeta, InsightItem, AskAnswer, ColumnMapping } from "@/types/student-data";
+import { StudentRecord, UploadedFileMeta, AskAnswer, ColumnMapping } from "@/types/student-data";
+import { InsightAnomaly } from "@/lib/engine/types";
 import { SAMPLE_STUDENTS } from "@/data/mock-school-data";
 import { scanDatasetInsights } from "@/lib/engine/calculator";
 import { parseSpreadsheetInBrowser, ParseResult } from "@/lib/engine/data-parser";
@@ -9,7 +10,7 @@ import { parseSpreadsheetInBrowser, ParseResult } from "@/lib/engine/data-parser
 interface SessionDataContextType {
   students: StudentRecord[];
   activeFiles: UploadedFileMeta[];
-  insights: InsightItem[];
+  insights: InsightAnomaly[];
   readinessScore: number;
   sessionMinutesRemaining: number;
   sessionDeleted: boolean;
@@ -21,6 +22,7 @@ interface SessionDataContextType {
   setPrefilledQuery: (q: string) => void;
   setPrefilledReportTemplate: (t: string) => void;
   addAnswer: (ans: AskAnswer) => void;
+  clearAnswersHistory: () => void;
   openStudentModal: (title: string, ids: string[]) => void;
   closeStudentModal: () => void;
   deleteSessionDataNow: () => void;
@@ -32,17 +34,7 @@ interface SessionDataContextType {
 const SessionDataContext = createContext<SessionDataContextType | undefined>(undefined);
 
 export function SessionDataProvider({ children }: { children: React.ReactNode }) {
-  const initialInsights: InsightItem[] = scanDatasetInsights(SAMPLE_STUDENTS).map((item) => ({
-    id: item.id,
-    category: item.category,
-    severity: item.severity,
-    title: item.title,
-    metric: item.metric,
-    description: item.description,
-    affectedStudentIds: item.affectedStudentIds,
-    suggestedAction: item.suggestedAction,
-    reportTemplate: item.reportTemplate,
-  }));
+  const initialInsights: InsightAnomaly[] = scanDatasetInsights(SAMPLE_STUDENTS);
 
   const [students, setStudents] = useState<StudentRecord[]>(SAMPLE_STUDENTS);
   const [activeFiles, setActiveFiles] = useState<UploadedFileMeta[]>([
@@ -63,7 +55,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
       status: "ready",
     },
   ]);
-  const [insights, setInsights] = useState<InsightItem[]>(initialInsights);
+  const [insights, setInsights] = useState<InsightAnomaly[]>(initialInsights);
   const [readinessScore, setReadinessScore] = useState<number>(100);
   const [sessionMinutesRemaining, setSessionMinutesRemaining] = useState<number>(45);
   const [sessionDeleted, setSessionDeleted] = useState<boolean>(false);
@@ -91,18 +83,6 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
   };
 
   const loadSampleDataset = () => {
-    const freshInsights: InsightItem[] = scanDatasetInsights(SAMPLE_STUDENTS).map((item) => ({
-      id: item.id,
-      category: item.category,
-      severity: item.severity,
-      title: item.title,
-      metric: item.metric,
-      description: item.description,
-      affectedStudentIds: item.affectedStudentIds,
-      suggestedAction: item.suggestedAction,
-      reportTemplate: item.reportTemplate,
-    }));
-
     setStudents(SAMPLE_STUDENTS);
     setActiveFiles([
       {
@@ -122,14 +102,18 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
         status: "ready",
       },
     ]);
-    setInsights(freshInsights);
+    setInsights(scanDatasetInsights(SAMPLE_STUDENTS));
     setReadinessScore(100);
     setSessionDeleted(false);
     setSessionMinutesRemaining(45);
   };
 
   const addAnswer = (ans: AskAnswer) => {
-    setAnswersHistory((prev) => [ans, ...prev]);
+    setAnswersHistory((prev) => [...prev, ans]);
+  };
+
+  const clearAnswersHistory = () => {
+    setAnswersHistory([]);
   };
 
   const openStudentModal = (title: string, ids: string[]) => {
@@ -144,19 +128,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
 
   const importParsedData = (fileName: string, fileSize: number, newRecords: StudentRecord[]) => {
     setStudents(newRecords);
-    const freshInsights: InsightItem[] = scanDatasetInsights(newRecords).map((item) => ({
-      id: item.id,
-      category: item.category,
-      severity: item.severity,
-      title: item.title,
-      metric: item.metric,
-      description: item.description,
-      affectedStudentIds: item.affectedStudentIds,
-      suggestedAction: item.suggestedAction,
-      reportTemplate: item.reportTemplate,
-    }));
-
-    setInsights(freshInsights);
+    setInsights(scanDatasetInsights(newRecords));
     setActiveFiles((prev) => [
       {
         id: `file-${Date.now()}`,
@@ -178,19 +150,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
 
     if (parseResult.records.length > 0) {
       setStudents(parseResult.records);
-      const dynamicInsights: InsightItem[] = scanDatasetInsights(parseResult.records).map((item) => ({
-        id: item.id,
-        category: item.category,
-        severity: item.severity,
-        title: item.title,
-        metric: item.metric,
-        description: item.description,
-        affectedStudentIds: item.affectedStudentIds,
-        suggestedAction: item.suggestedAction,
-        reportTemplate: item.reportTemplate,
-      }));
-
-      setInsights(dynamicInsights);
+      setInsights(scanDatasetInsights(parseResult.records));
       setActiveFiles([
         {
           id: `file-${Date.now()}`,
@@ -226,6 +186,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
         setPrefilledQuery,
         setPrefilledReportTemplate,
         addAnswer,
+        clearAnswersHistory,
         openStudentModal,
         closeStudentModal,
         deleteSessionDataNow,

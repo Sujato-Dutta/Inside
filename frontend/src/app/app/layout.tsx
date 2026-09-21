@@ -10,25 +10,24 @@ import { StudentDetailsModal } from "@/components/modals/StudentDetailsModal";
 import {
   Home,
   MessageSquare,
-  Sparkles,
-  FileText,
   ShieldCheck,
+  FileText,
+  Database,
   Clock,
-  Trash2,
   User,
   LogOut,
-  ChevronRight,
 } from "lucide-react";
 
 function AppNavbar() {
   const pathname = usePathname();
-  const { sessionMinutesRemaining, activeFiles, deleteSessionDataNow, sessionDeleted } = useSessionData();
+  const { sessionMinutesRemaining, activeFiles, sessionDeleted } = useSessionData();
 
   const navItems = [
     { label: "Home", href: "/app", icon: Home },
     { label: "Ask Inside", href: "/app/ask", icon: MessageSquare },
-    { label: "Insights", href: "/app/insights", icon: Sparkles },
+    { label: "Inspections", href: "/app/inspections", icon: ShieldCheck },
     { label: "Reports", href: "/app/reports", icon: FileText },
+    { label: "Data Hub", href: "/app/data", icon: Database },
   ];
 
   return (
@@ -50,7 +49,7 @@ function AppNavbar() {
             </div>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Navigation Links — 5 Tabs */}
           <nav className="hidden md:flex items-center gap-1 bg-orange-50/70 p-1 rounded-full border border-orange-200">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -73,7 +72,7 @@ function AppNavbar() {
           </nav>
         </div>
 
-        {/* Right Section: Session Pill, Theme, Profile */}
+        {/* Right Section: Session Pill, Profile */}
         <div className="flex items-center gap-3">
           {/* Privacy & Session Countdown Pill */}
           {!sessionDeleted && (

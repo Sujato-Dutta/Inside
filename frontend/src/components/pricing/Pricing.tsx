@@ -140,7 +140,12 @@ export function Pricing() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <PricingSection
           plans={INSIDE_PLANS}
-          heading="Plans that scale with your classrooms and teams."
+          heading={
+            <>
+              Plans that scale with your{" "}
+              <span className="text-amber-gradient">classrooms and teams.</span>
+            </>
+          }
           description="Start free for 14 days. No credit card required. Cancel or upgrade anytime."
         />
       </div>

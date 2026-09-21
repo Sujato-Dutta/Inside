@@ -7,16 +7,13 @@ import {
   MessageSquare,
   X,
   Send,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
   Sparkles,
   Bot,
   User,
   ChevronDown,
   Info,
 } from "lucide-react";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
 interface ChatMessage {
   id: string;
@@ -37,40 +34,7 @@ export function FloatingAssistant() {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
-
-  // Initialize Speech Recognition if supported
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = "en-US";
-
-        recognition.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          setInputValue(transcript);
-          setIsListening(false);
-        };
-
-        recognition.onerror = () => {
-          setIsListening(false);
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
-        };
-
-        recognitionRef.current = recognition;
-      }
-    }
-  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -81,76 +45,6 @@ export function FloatingAssistant() {
       scrollToBottom();
     }
   }, [messages, isOpen]);
-
-  const toggleListening = () => {
-    if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in this browser. Please type your message.");
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (err) {
-        console.warn("Speech recognition error:", err);
-      }
-    }
-  };
-
-  const speakText = async (text: string) => {
-    if (isSpeaking) {
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-      setIsSpeaking(false);
-      return;
-    }
-
-    setIsSpeaking(true);
-
-    try {
-      // First attempt Groq TTS API (canopylabs/orpheus-v1-english)
-      const res = await fetch("/api/ai/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-
-      if (res.ok && res.headers.get("Content-Type")?.includes("audio")) {
-        const blob = await res.blob();
-        const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        audio.onended = () => setIsSpeaking(false);
-        audio.onerror = () => {
-          fallbackSpeech(text);
-        };
-        await audio.play();
-        return;
-      }
-    } catch (e) {
-      console.warn("Server TTS fallback to browser synthesis:", e);
-    }
-
-    fallbackSpeech(text);
-  };
-
-  const fallbackSpeech = (text: string) => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      setIsSpeaking(false);
-    }
-  };
 
   const handleSendMessage = async (customText?: string) => {
     const textToSend = customText || inputValue;
@@ -296,24 +190,16 @@ export function FloatingAssistant() {
                     {msg.sender === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                   </div>
                   <div
-                    className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-relaxed ${
+                    className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-relaxed ${
                       msg.sender === "user"
                         ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xs rounded-tr-none"
                         : "bg-[#F5F2EB] border border-[#E3DED4] text-[#1C1A17] rounded-tl-none"
                     }`}
                   >
-                    <p>{msg.content}</p>
-                    {msg.sender === "assistant" && (
-                      <div className="mt-1.5 flex items-center justify-end">
-                        <button
-                          onClick={() => speakText(msg.content)}
-                          className="text-[11px] text-[#5C5852] hover:text-orange-600 flex items-center gap-1 transition-colors"
-                          title="Listen to audio response"
-                        >
-                          <Volume2 className="w-3 h-3" />
-                          <span>Listen</span>
-                        </button>
-                      </div>
+                    {msg.sender === "user" ? (
+                      <p>{msg.content}</p>
+                    ) : (
+                      <MarkdownRenderer content={msg.content} className="text-[13px] space-y-2" />
                     )}
                   </div>
                 </div>
@@ -355,7 +241,7 @@ export function FloatingAssistant() {
               </div>
             </div>
 
-            {/* Input Bar */}
+            {/* Input Bar (Text Only) */}
             <div className="p-3 border-t border-[#E3DED4] bg-white">
               <form
                 onSubmit={(e) => {
@@ -364,25 +250,11 @@ export function FloatingAssistant() {
                 }}
                 className="flex items-center gap-2"
               >
-                {/* Voice Mic Button (STT) */}
-                <button
-                  type="button"
-                  onClick={toggleListening}
-                  className={`p-2.5 rounded-xl border transition-colors ${
-                    isListening
-                      ? "bg-red-500 text-white border-red-600 animate-pulse"
-                      : "bg-orange-50 border border-orange-200 text-[#5C5852] hover:text-orange-600"
-                  }`}
-                  title={isListening ? "Listening... click to stop" : "Click to speak (Voice STT)"}
-                >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
-
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder={isListening ? "Listening to your voice..." : "Ask assistant a question..."}
+                  placeholder="Ask assistant a question..."
                   className="flex-1 px-3.5 py-2 text-[13px] rounded-xl border border-[#E3DED4] bg-[#F5F2EB] text-[#1C1A17] placeholder-[#8C877E] focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                 />
 

@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useSessionData } from "@/context/SessionDataContext";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, ShieldCheck, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 export function StudentDetailsModal() {
   const { activeModalStudentIds, activeModalTitle, closeStudentModal, students, setPrefilledQuery } =

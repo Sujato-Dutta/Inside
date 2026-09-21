@@ -54,7 +54,12 @@ const teacherTestimonials = [
 export function TeacherTestimonials() {
   return (
     <TestimonialsSection
-      title="Loved by educators and teachers worldwide."
+      title={
+        <>
+          Loved by educators{" "}
+          <span className="text-amber-gradient">and teachers worldwide.</span>
+        </>
+      }
       description="Join thousands of teachers, principals, and academic leaders who turn student data into clear answers with Inside."
       testimonials={teacherTestimonials}
     />
