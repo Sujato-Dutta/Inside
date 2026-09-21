@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  :root {
+    --background: 245 242 235;
+    --foreground: 28 26 23;
+    --card: 255 255 255;
+    --card-foreground: 28 26 23;
+    --border: 227 222 212;
+    --brand-primary: 249 115 22;
+    --brand-glow: rgba(249, 115, 22, 0.25);
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #F5F2EB;
+    color: #1C1A17;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+  }
+}
+
+/* Editorial Paper & Card utilities */
+.glass-panel {
+  background: #FFFFFF;
+  border: 1px solid #E3DED4;
+  box-shadow: 0 1px 3px rgba(28, 26, 23, 0.04), 0 4px 12px rgba(28, 26, 23, 0.03);
+}
+
+.glass-pill {
+  background: #FFFFFF;
+  border: 1px solid #E3DED4;
+  box-shadow: 0 1px 2px rgba(28, 26, 23, 0.03);
+}
+
+/* Orange/Amber gradient text */
+.text-amber-gradient {
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 50%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Clean editorial card elevation with warm orange glow */
+.amber-glow-box {
+  box-shadow: 0 4px 20px -5px rgba(249, 115, 22, 0.2);
+  border: 1px solid #FED7AA;
+}
+
+.dark .amber-glow-box {
+  box-shadow: 0 4px 20px -5px rgba(249, 115, 22, 0.2);
+  border: 1px solid #FED7AA;
+}
+
+.amber-border-glow {
+  border: 1px solid #FDBA74;
+  box-shadow: 0 1px 3px rgba(249, 115, 22, 0.1);
+}
+
+/* Animated flow lines */
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.animate-conduit {
+  stroke-dasharray: 8 12;
+  animation: flowDash 1.4s linear infinite;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.5);
+}
+
+/* Horizontal sliding marquees */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-logos {
+  display: flex;
+  width: max-content;
+  animation: marquee 45s linear infinite;
+}
+
+.animate-marquee-logos:hover {
+  animation-play-state: paused;
+}
+
+/* Exactly matching velocity (~35px/second) as the university logos */
+.animate-marquee-testimonials {
+  display: flex;
+  width: max-content;
+  animation: marquee 80s linear infinite;
+}
+
+.animate-marquee-testimonials:hover {
+  animation-play-state: paused;
+}
+
