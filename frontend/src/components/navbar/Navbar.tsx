@@ -26,7 +26,7 @@ export function Navbar() {
     { label: "Story", href: "#story" },
     { label: "Features", href: "#features" },
     { label: "How It Works", href: "#how-it-works" },
-    { label: "Educators", href: "#testimonials" },
+    { label: "Who It's For", href: "#who-its-for" },
     { label: "Pricing", href: "#pricing" },
   ];
 

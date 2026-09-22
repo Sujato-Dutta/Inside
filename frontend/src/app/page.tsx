@@ -9,6 +9,7 @@ import { ScrollStory } from "@/components/story/ScrollStory";
 import { Features } from "@/components/features/Features";
 import { HowItWorks } from "@/components/how-it-works/HowItWorks";
 import { TeacherTestimonials } from "@/components/testimonials/TeacherTestimonials";
+import { ExecutiveWorkspaces } from "@/components/audience/ExecutiveWorkspaces";
 import { Pricing } from "@/components/pricing/Pricing";
 import { CTASection } from "@/components/cta/CTASection";
 import { Footer } from "@/components/footer/Footer";
@@ -40,7 +41,10 @@ export default function Home() {
       {/* Educator & Teacher Testimonials Marquee */}
       <TeacherTestimonials />
 
-      {/* Transparent Pricing */}
+      {/* Role-specific workspaces for the four accountable leaders */}
+      <ExecutiveWorkspaces />
+
+      {/* Annual Campus Licensing */}
       <Pricing />
 
       {/* Call to Action */}
