@@ -65,6 +65,8 @@ export interface DeterministicResult {
     cohortRule: string;
     totalRecords: number;
     matchedRecords: number;
+    /** Browser-only pointers to the source records used for this calculation. */
+    localRecordIds?: string[];
     steps: { label: string; formula: string; inputs: string; result: string }[];
     evidence: TableData;
   };

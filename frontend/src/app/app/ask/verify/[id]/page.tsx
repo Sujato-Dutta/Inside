@@ -21,13 +21,13 @@ function VerificationContent() {
     <header className="rounded-3xl border border-orange-200 bg-gradient-to-br from-orange-50 via-white to-white p-6 sm:p-8">
       <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-emerald-800"><ShieldCheck className="h-3.5 w-3.5" />Verified in this browser</div>
       <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Calculation record</h1>
-      <p className="mt-2 text-sm text-[#5C5852]">Every figure below is reproduced from the active session data. The question was interpreted by deterministic rules; no LLM generated the figures or a hidden reasoning trace.</p>
+      <p className="mt-2 text-sm text-[#5C5852]">{exchange.interpretationSource === "local" ? "The pupil reference was matched in this browser." : "Groq selected the analysis type from question text."} Every figure below was calculated from the active data in this browser. This page shows reproducible arithmetic, not model internal reasoning.</p>
       <div className="mt-6 rounded-2xl border border-[#E3DED4] bg-white p-4"><p className="text-[11px] font-bold uppercase tracking-wide text-[#817B71]">Question</p><p className="mt-1 text-base font-semibold">{exchange.question}</p>{exchange.interpretedQuestion !== exchange.question && <p className="mt-3 text-xs text-[#5C5852]">Conversation context used: {exchange.interpretedQuestion}</p>}</div>
     </header>
 
     <div className="grid gap-4 sm:grid-cols-3">{[
       ["Records in active dataset", proof.totalRecords],
-      ["Records in selected cohort", proof.matchedRecords],
+      ["Records used in calculation", proof.matchedRecords],
       ["Calculation steps", proof.steps.length],
     ].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-[#E3DED4] bg-white p-5"><p className="text-[11px] font-bold uppercase tracking-wider text-[#726C62]">{label}</p><p className="mt-2 text-2xl font-extrabold">{value}</p></div>)}</div>
 

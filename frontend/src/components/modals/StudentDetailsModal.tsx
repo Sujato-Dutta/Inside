@@ -17,8 +17,8 @@ export function StudentDetailsModal() {
   const flaggedStudents = students.filter((s) => activeModalStudentIds.includes(s.id));
 
   const handleAskAboutCohort = () => {
-    const studentNames = flaggedStudents.map((s) => s.name).slice(0, 4).join(", ");
-    setPrefilledQuery(`Provide an action plan for students needing support: ${studentNames}`);
+    // Never place pupil names or references in the prompt sent for LLM interpretation.
+    setPrefilledQuery("What general steps can we take to support pupils needing intervention?");
     closeStudentModal();
     router.push("/app/ask");
   };
@@ -70,7 +70,7 @@ export function StudentDetailsModal() {
             Close
           </Button>
           <Button variant="primary" size="sm" onClick={handleAskAboutCohort} icon={<ArrowRight className="w-3.5 h-3.5" />}>
-            Ask Inside About This Cohort
+            Ask Inside for general support ideas
           </Button>
         </div>
       </div>

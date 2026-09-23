@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { useSessionData } from "@/context/SessionDataContext";
 
 interface ChatMessage {
   id: string;
@@ -22,6 +23,7 @@ interface ChatMessage {
 }
 
 export function FloatingAssistant() {
+  const { students } = useSessionData();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -38,6 +40,8 @@ export function FloatingAssistant() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const mentionsKnownPupil = (content: string) => students.some((student) => [student.name, student.sourceRef, student.id].some((value) => value && value.length > 3 && content.toLowerCase().includes(value.toLowerCase())));
 
   useEffect(() => {
     if (isOpen) {
@@ -61,19 +65,23 @@ export function FloatingAssistant() {
     setIsTyping(true);
 
     try {
+      if (mentionsKnownPupil(textToSend)) {
+        setMessages((prev) => [...prev, { id: crypto.randomUUID(), sender: "assistant", content: "Please use Ask Inside for individual pupil questions. That lookup stays in your browser.", timestamp: "Just now" }]);
+        return;
+      }
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMsg].map((m) => ({
+          messages: [...messages, userMsg].filter((message) => !mentionsKnownPupil(message.content)).slice(-8).map((m) => ({
             role: m.sender === "user" ? "user" : "assistant",
             content: m.content,
           })),
         }),
       });
 
+      const data = await response.json().catch(() => ({}));
       if (response.ok) {
-        const data = await response.json();
         const botReply: ChatMessage = {
           id: `msg-${Date.now() + 1}`,
           sender: "assistant",
@@ -82,7 +90,7 @@ export function FloatingAssistant() {
         };
         setMessages((prev) => [...prev, botReply]);
       } else {
-        throw new Error("Chat response failed");
+        throw new Error(data.error || "The assistant could not connect to Groq. Please try again.");
       }
     } catch (e) {
       setMessages((prev) => [
@@ -90,7 +98,7 @@ export function FloatingAssistant() {
         {
           id: `msg-${Date.now() + 1}`,
           sender: "assistant",
-          content: "You can ask questions about student attendance, attainment gaps, or test scores directly in the Ask Inside tab.",
+          content: e instanceof Error ? e.message : "The assistant could not connect to Groq. Please try again.",
           timestamp: "Just now",
         },
       ]);
@@ -158,7 +166,7 @@ export function FloatingAssistant() {
                     Inside Assistant
                   </h4>
                   <p className="text-[12px] text-[#5C5852]">
-                    Quick references & school data guidance
+                    Product guidance only; do not paste school data
                   </p>
                 </div>
               </div>

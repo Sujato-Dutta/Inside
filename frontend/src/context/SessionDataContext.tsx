@@ -12,6 +12,10 @@ export interface AskExchange {
   id: string;
   question: string;
   interpretedQuestion: string;
+  interpretationSource: "groq" | "local";
+  presentation?: string;
+  reasoning?: string;
+  advice?: string[];
   result: DeterministicResult;
 }
 
