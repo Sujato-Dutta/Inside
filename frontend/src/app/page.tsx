@@ -4,7 +4,6 @@ import React from "react";
 import { Navbar } from "@/components/navbar/Navbar";
 import { Hero } from "@/components/hero/Hero";
 import { ProductDemo } from "@/components/demo/ProductDemo";
-import { UniversityTicker } from "@/components/logos/UniversityTicker";
 import { ScrollStory } from "@/components/story/ScrollStory";
 import { Features } from "@/components/features/Features";
 import { HowItWorks } from "@/components/how-it-works/HowItWorks";
@@ -26,8 +25,6 @@ export default function Home() {
       {/* Section 2: Mock 1 Style (Interact with data in your own language) */}
       <ProductDemo />
 
-      {/* Universities and Schools Marquee Slider */}
-      <UniversityTicker />
 
       {/* 4-Step Story: From data overload to clarity (Fig 1 - 4) */}
       <ScrollStory />

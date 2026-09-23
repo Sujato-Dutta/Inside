@@ -3,9 +3,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { StudentRecord, UploadedFileMeta, AskAnswer, ColumnMapping } from "@/types/student-data";
 import { InsightAnomaly } from "@/lib/engine/types";
+import { DeterministicResult } from "@/lib/engine/types";
 import { SAMPLE_STUDENTS } from "@/data/mock-school-data";
 import { scanDatasetInsights } from "@/lib/engine/calculator";
 import { parseSpreadsheetInBrowser, ParseResult } from "@/lib/engine/data-parser";
+
+export interface AskExchange {
+  id: string;
+  question: string;
+  interpretedQuestion: string;
+  result: DeterministicResult;
+}
 
 interface SessionDataContextType {
   students: StudentRecord[];
@@ -15,6 +23,7 @@ interface SessionDataContextType {
   sessionMinutesRemaining: number;
   sessionDeleted: boolean;
   answersHistory: AskAnswer[];
+  askExchanges: AskExchange[];
   prefilledQuery: string;
   prefilledReportTemplate: string;
   activeModalStudentIds: string[] | null;
@@ -23,11 +32,18 @@ interface SessionDataContextType {
   setPrefilledReportTemplate: (t: string) => void;
   addAnswer: (ans: AskAnswer) => void;
   clearAnswersHistory: () => void;
+  addAskExchange: (exchange: AskExchange) => void;
+  resetAskConversation: () => void;
   openStudentModal: (title: string, ids: string[]) => void;
   closeStudentModal: () => void;
   deleteSessionDataNow: () => void;
   loadSampleDataset: () => void;
   importParsedData: (fileName: string, fileSize: number, records: StudentRecord[]) => void;
+  commitSanitizedDataset: (
+    files: UploadedFileMeta[],
+    records: StudentRecord[],
+    readiness: number
+  ) => void;
   importFileContent: (fileName: string, fileSize: number, contentString: string) => ParseResult;
 }
 
@@ -60,6 +76,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
   const [sessionMinutesRemaining, setSessionMinutesRemaining] = useState<number>(45);
   const [sessionDeleted, setSessionDeleted] = useState<boolean>(false);
   const [answersHistory, setAnswersHistory] = useState<AskAnswer[]>([]);
+  const [askExchanges, setAskExchanges] = useState<AskExchange[]>([]);
   const [prefilledQuery, setPrefilledQuery] = useState<string>("");
   const [prefilledReportTemplate, setPrefilledReportTemplate] = useState<string>("Leadership Summary");
   const [activeModalStudentIds, setActiveModalStudentIds] = useState<string[] | null>(null);
@@ -78,6 +95,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
     setActiveFiles([]);
     setInsights([]);
     setAnswersHistory([]);
+    setAskExchanges([]);
     setReadinessScore(0);
     setSessionDeleted(true);
   };
@@ -103,6 +121,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
       },
     ]);
     setInsights(scanDatasetInsights(SAMPLE_STUDENTS));
+    setAskExchanges([]);
     setReadinessScore(100);
     setSessionDeleted(false);
     setSessionMinutesRemaining(45);
@@ -115,6 +134,9 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
   const clearAnswersHistory = () => {
     setAnswersHistory([]);
   };
+
+  const addAskExchange = (exchange: AskExchange) => setAskExchanges((previous) => [...previous, exchange]);
+  const resetAskConversation = () => { setAskExchanges([]); setPrefilledQuery(""); };
 
   const openStudentModal = (title: string, ids: string[]) => {
     setActiveModalTitle(title);
@@ -129,6 +151,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
   const importParsedData = (fileName: string, fileSize: number, newRecords: StudentRecord[]) => {
     setStudents(newRecords);
     setInsights(scanDatasetInsights(newRecords));
+    setAskExchanges([]);
     setActiveFiles((prev) => [
       {
         id: `file-${Date.now()}`,
@@ -145,12 +168,28 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
     setSessionDeleted(false);
   };
 
+  const commitSanitizedDataset = (
+    files: UploadedFileMeta[],
+    records: StudentRecord[],
+    readiness: number
+  ) => {
+    setStudents(records);
+    setInsights(scanDatasetInsights(records));
+    setActiveFiles(files);
+    setReadinessScore(readiness);
+    setAnswersHistory([]);
+    setAskExchanges([]);
+    setSessionDeleted(false);
+    setSessionMinutesRemaining(45);
+  };
+
   const importFileContent = (fileName: string, fileSize: number, contentString: string): ParseResult => {
     const parseResult = parseSpreadsheetInBrowser(contentString, fileName);
 
     if (parseResult.records.length > 0) {
       setStudents(parseResult.records);
       setInsights(scanDatasetInsights(parseResult.records));
+      setAskExchanges([]);
       setActiveFiles([
         {
           id: `file-${Date.now()}`,
@@ -179,6 +218,7 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
         sessionMinutesRemaining,
         sessionDeleted,
         answersHistory,
+        askExchanges,
         prefilledQuery,
         prefilledReportTemplate,
         activeModalStudentIds,
@@ -187,11 +227,14 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
         setPrefilledReportTemplate,
         addAnswer,
         clearAnswersHistory,
+        addAskExchange,
+        resetAskConversation,
         openStudentModal,
         closeStudentModal,
         deleteSessionDataNow,
         loadSampleDataset,
         importParsedData,
+        commitSanitizedDataset,
         importFileContent,
       }}
     >

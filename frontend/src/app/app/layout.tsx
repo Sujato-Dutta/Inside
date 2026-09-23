@@ -20,7 +20,7 @@ import {
 
 function AppNavbar() {
   const pathname = usePathname();
-  const { sessionMinutesRemaining, activeFiles, sessionDeleted } = useSessionData();
+  const { sessionMinutesRemaining, activeFiles, students, sessionDeleted } = useSessionData();
 
   const navItems = [
     { label: "Home", href: "/app", icon: Home },
@@ -111,6 +111,24 @@ function AppNavbar() {
           >
             <LogOut className="w-4 h-4" />
           </Link>
+        </div>
+      </div>
+
+      <div className="hidden border-t border-[#E3DED4] bg-[#F9F6F0] md:block">
+        <div className="mx-auto flex h-8 max-w-7xl items-center justify-between px-4 text-[10px] font-bold uppercase tracking-wider text-[#5C5852] sm:px-6 lg:px-8">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 text-emerald-700">
+              <Database className="h-3.5 w-3.5" />
+              Volatile RAM: {students.length} records
+            </span>
+            <span>{activeFiles.length} source file{activeFiles.length === 1 ? "" : "s"}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700">
+              DSIB / KHDA framework
+            </span>
+            <span>No cloud row storage</span>
+          </div>
         </div>
       </div>
 

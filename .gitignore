@@ -10,7 +10,7 @@ venv/
 pip-log.txt
 pip-delete-this-directory.txt
 .pytest_cache/
-data/
+/data/
 
 # Node & Next.js
 node_modules/

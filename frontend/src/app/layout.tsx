@@ -3,16 +3,15 @@ import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "Inside: Your Personal AI Data Analyst",
+  title: "Inside | UAE School Inspection Intelligence",
   description:
-    "Inside connects to your warehouses, CRMs, and spreadsheets, turning plain-English questions into publication-ready charts, deep root-cause summaries, and proactive business decisions.",
+    "A privacy-first, deterministic school data analyst for UAE principals, academic leaders, inclusion heads, and data managers.",
   keywords: [
     "AI Data Analyst",
-    "Conversational BI",
-    "SQL Generator",
-    "Autonomous Analytics",
-    "Snowflake AI",
-    "Data Intelligence",
+    "UAE School Analytics",
+    "DSIB Inspection Readiness",
+    "ADEK Evidence",
+    "School Data Privacy",
   ],
   authors: [{ name: "Inside Team" }],
   icons: {

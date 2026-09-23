@@ -11,7 +11,6 @@ import {
   Bot,
   User,
   ChevronDown,
-  Info,
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
@@ -215,30 +214,6 @@ export function FloatingAssistant() {
               )}
 
               <div ref={messagesEndRef} />
-            </div>
-
-            {/* Quick Reference Prompts */}
-            <div className="px-4 py-2 border-t border-[#E3DED4] bg-orange-50/40">
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[12px] text-[#5C5852] no-scrollbar">
-                <button
-                  onClick={() => handleSendMessage("What is persistent absence?")}
-                  className="px-2.5 py-1 rounded-full bg-white border border-[#E3DED4] hover:border-orange-500/60 hover:text-orange-600 shrink-0 transition"
-                >
-                  Persistent Absence?
-                </button>
-                <button
-                  onClick={() => handleSendMessage("How do I export to PDF?")}
-                  className="px-2.5 py-1 rounded-full bg-white border border-[#E3DED4] hover:border-orange-500/60 hover:text-orange-600 shrink-0 transition"
-                >
-                  Exporting Reports?
-                </button>
-                <button
-                  onClick={() => handleSendMessage("Explain SEND attainment gap")}
-                  className="px-2.5 py-1 rounded-full bg-white border border-[#E3DED4] hover:border-orange-500/60 hover:text-orange-600 shrink-0 transition"
-                >
-                  SEND Gap?
-                </button>
-              </div>
             </div>
 
             {/* Input Bar (Text Only) */}

@@ -1,5 +1,7 @@
 export interface StudentRecord {
   id: string;
+  /** Raw source identifier retained only in volatile browser memory for local joins/lookups. */
+  sourceRef?: string;
   name: string;
   gender: "Male" | "Female" | "Other";
   yearGroup: number;
@@ -52,6 +54,28 @@ export interface ColumnMapping {
   original: string;
   mappedTo: keyof StudentRecord | "ignore";
   confidence: number;
+  sourceFile?: string;
+  scoreBase?: number;
+  normalization?: string;
+}
+
+export interface DataQualityIssue {
+  id: string;
+  studentRef: string;
+  sourceFile: string;
+  field: keyof StudentRecord | "row";
+  issue: string;
+  observed: string | number;
+  maximum?: number;
+  action: "cap" | "adjust-base" | "override" | "exclude";
+}
+
+export interface HygieneAuditEntry {
+  id: string;
+  sourceFile: string;
+  studentRef: string;
+  action: string;
+  detail: string;
 }
 
 export interface InsightItem {

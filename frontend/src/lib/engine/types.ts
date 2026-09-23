@@ -60,6 +60,14 @@ export interface DeterministicResult {
   sourceDataset: string;
   explanation: string;
   suggestedActions: string[];
+  verification?: {
+    interpretation: string;
+    cohortRule: string;
+    totalRecords: number;
+    matchedRecords: number;
+    steps: { label: string; formula: string; inputs: string; result: string }[];
+    evidence: TableData;
+  };
 }
 
 export interface InsightAnomaly {
