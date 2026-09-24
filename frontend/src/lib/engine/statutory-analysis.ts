@@ -11,6 +11,7 @@ const subjectScore = (s: StudentRecord, subject: "math" | "science" | "english")
   s.term2EnglishGrade ?? s.englishGrade;
 const termOne = (s: StudentRecord) => avg([s.term1MathGrade ?? s.mathGrade, s.term1ScienceGrade ?? s.scienceGrade, s.term1EnglishGrade ?? s.englishGrade]);
 const termTwo = (s: StudentRecord) => avg([s.term2MathGrade ?? s.mathGrade, s.term2ScienceGrade ?? s.scienceGrade, s.term2EnglishGrade ?? s.englishGrade]);
+const hasCoreResult = (s: StudentRecord) => termTwo(s) > 0;
 const table = (rows: StudentRecord[], limit = 15) => ({
   headers: ["Anonymous Ref", "Year", "Section", "Gender", "Attendance", "Math", "Science", "English", "SEND", "Emirati"],
   rows: rows.slice(0, limit).map((s) => [s.id, `Y${s.yearGroup}`, s.classGroup, s.gender, `${s.attendanceRate}%`, round(subjectScore(s, "math")), round(subjectScore(s, "science")), round(subjectScore(s, "english")), s.inclusionSend || (s.senStatus ? "SEND" : "None"), s.emiratiStatus ? "Yes" : "No"]),
@@ -72,7 +73,8 @@ export function analyzeCohortMetric(students: StudentRecord[], plan: AskPlan, fi
   const cohortName = rules.join(", ") || "whole school";
   if (!cohort.length) return clarificationResult(`No records match ${cohortName}. Try a broader cohort or check the loaded files.`, students.length, dataset);
   const metricName = subject ? plan.subject! : "core average";
-  const scores = cohort.map((student) => subject ? subjectScore(student, subject) : termTwo(student));
+  const scoredCohort = cohort.filter((student) => (subject ? subjectScore(student, subject) : termTwo(student)) > 0);
+  const scores = scoredCohort.map((student) => subject ? subjectScore(student, subject) : termTwo(student));
   if (plan.metric === "count") {
     return makeResult(students, dataset, `Pupil count: ${cohortName}`, [{ label: cohortName, Count: cohort.length }],
       [`${cohort.length} of ${students.length} pupils match ${cohortName}.`, "The count uses the committed records in this browser session."], cohort,
@@ -80,18 +82,20 @@ export function analyzeCohortMetric(students: StudentRecord[], plan: AskPlan, fi
       [numberStep("Matching pupils", cohort.length, cohortName), share("Share of loaded pupils", cohort.length, students.length)], "label", ["Count"]);
   }
   if (plan.metric === "mean_grade") {
+    if (!scoredCohort.length) return clarificationResult(`No current ${metricName} results are loaded for ${cohortName}.`, students.length, dataset);
     const average = round(avg(scores));
     return makeResult(students, dataset, `${metricName} mean grade: ${cohortName}`, [{ label: cohortName, "Mean grade": average }],
-      [`${cohort.length} pupils match ${cohortName}.`, `Their current ${metricName} mean is Grade ${average}.`, "This is an observed mean, not a forecast."], cohort,
+      [`${scoredCohort.length} assessed pupils match ${cohortName}.`, `Their current ${metricName} mean is Grade ${average}.`, "This is an observed mean, not a forecast."], scoredCohort,
       `The question requests the current ${metricName} mean for one cohort.`, cohortName,
-      [numberStep("Matching pupils", cohort.length, cohortName), mean(`${metricName} mean`, scores)], "label", ["Mean grade"]);
+      [numberStep("Assessed pupils", scoredCohort.length, cohortName), mean(`${metricName} mean`, scores)], "label", ["Mean grade"]);
   }
+  if (!scoredCohort.length) return clarificationResult(`No current ${metricName} results are loaded for ${cohortName}.`, students.length, dataset);
   const attained = scores.filter((score) => score >= 5).length;
-  const rate = pct(attained, cohort.length);
+  const rate = pct(attained, scoredCohort.length);
   return makeResult(students, dataset, `${metricName} attainment: ${cohortName}`, [{ label: cohortName, Attainment: rate }],
-    [`${attained} of ${cohort.length} pupils in ${cohortName} are at or above the current Grade 5 reference in ${metricName}.`, `That is ${rate}% for this cohort.`, "The result is calculated from current loaded marks only."], cohort,
+    [`${attained} of ${scoredCohort.length} assessed pupils in ${cohortName} are at or above the school's Grade 5 reference in ${metricName}.`, `That is ${rate}% for this cohort, not an official inspection grade.`, "The result is calculated from current loaded marks only."], scoredCohort,
     `The question requests current ${metricName} attainment for one cohort.`, cohortName,
-    [numberStep("Matching pupils", cohort.length, cohortName), share(`${metricName} at or above expected`, attained, cohort.length)], "label", ["Attainment"]);
+    [numberStep("Assessed pupils", scoredCohort.length, cohortName), share(`${metricName} at or above expected`, attained, scoredCohort.length)], "label", ["Attainment"]);
 }
 
 export function analyzeRecordList(students: StudentRecord[], plan: AskPlan, files: UploadedFileMeta[] = []): DeterministicResult {
@@ -308,15 +312,15 @@ export function analyzeStatutoryQuery(students: StudentRecord[], query: string, 
       ["Post-16", (s: StudentRecord) => s.yearGroup >= 12],
     ] as const;
     const data = phases.map(([label, test]) => {
-      const group = students.filter(test);
+      const group = students.filter((student) => test(student) && hasCoreResult(student));
       return { label, Attainment: pct(group.filter((s) => termTwo(s) >= 5).length, group.length), "Below Expected": pct(group.filter((s) => termTwo(s) < 5).length, group.length) };
     });
-    const populated = data.filter((item) => phases.some(([label, test]) => label === item.label && students.some(test)));
+    const populated = data.filter((item) => phases.some(([label, test]) => label === item.label && students.some((student) => test(student) && hasCoreResult(student))));
     const strongest = [...populated].sort((a, b) => Number(b.Attainment) - Number(a.Attainment))[0];
-    return makeResult(students, dataset, "Phase attainment against DSIB benchmark", populated,
+    return makeResult(students, dataset, "Current phase attainment at the school's Grade 5 reference", populated,
       [strongest ? `${strongest.label} is the strongest evidenced phase at ${strongest.Attainment}% at/above expected.` : "No phase has evidence in this session.", "These are current-cycle distributions; they do not predict future marks.", "A phase with no records has no evidenced rating."], students,
       "The question requests current attainment grouped by school phase.", "All records grouped into FS / EYFS, Primary, Secondary, and Post-16",
-      phases.flatMap(([label, test]) => { const group = students.filter(test); const attained = group.filter((s) => termTwo(s) >= 5).length; return [share(`${label} at or above expected`, attained, group.length), share(`${label} below expected`, group.length - attained, group.length)]; }), "label", ["Attainment", "Below Expected"]);
+      phases.flatMap(([label, test]) => { const group = students.filter((student) => test(student) && hasCoreResult(student)); const attained = group.filter((s) => termTwo(s) >= 5).length; return [share(`${label} at or above expected`, attained, group.length), share(`${label} below expected`, group.length - attained, group.length)]; }), "label", ["Attainment", "Below Expected"]);
   }
   if (/send|determination|inclusion|wave 2|wave 3/.test(lower)) {
     const send = students.filter((s) => s.senStatus || (s.inclusionSend && s.inclusionSend !== "None"));
@@ -422,9 +426,9 @@ export function analyzeStatutoryQuery(students: StudentRecord[], query: string, 
   const subjects = [["English", "english"], ["Mathematics", "math"], ["Science", "science"]] as const;
   const requested = subjects.filter(([label, subject]) => lower.includes(subject) || lower.includes(label.toLowerCase()));
   const selected = requested.length === 1 && !/whole.school|core subjects|across/.test(lower) ? requested : subjects;
-  const data = selected.map(([label, subject]) => ({ label, Attainment: pct(students.filter((s) => subjectScore(s, subject) >= 5).length, students.length), "Below Expected": pct(students.filter((s) => subjectScore(s, subject) < 5).length, students.length) }));
-  return makeResult(students, dataset, "Core attainment against the 75% DSIB benchmark", data,
-    [`${data.filter((s) => s.Attainment >= 75).length} of ${data.length} assessed subject${data.length === 1 ? "" : "s"} meet the 75% DSIB reference.`, `The strongest assessed subject is ${[...data].sort((a, b) => b.Attainment - a.Attainment)[0].label}.`, "All percentages are reproducible from the anonymized evidence ledger."], students,
+  const data = selected.map(([label, subject]) => { const assessed = students.filter((s) => subjectScore(s, subject) > 0); return { label, Attainment: pct(assessed.filter((s) => subjectScore(s, subject) >= 5).length, assessed.length), "Below Expected": pct(assessed.filter((s) => subjectScore(s, subject) < 5).length, assessed.length) }; });
+  return makeResult(students, dataset, "Core attainment against the school's 75% screening reference", data,
+    [`${data.filter((s) => s.Attainment >= 75).length} of ${data.length} assessed subject${data.length === 1 ? "" : "s"} meet the school's internal 75% reference; this is not an official inspection grade.`, `The strongest assessed subject is ${[...data].sort((a, b) => b.Attainment - a.Attainment)[0].label}.`, "All percentages are reproducible from the anonymized evidence ledger."], students,
     "The question requests current core subject attainment against the 75% reference.", "All committed pupils, assessed separately in English, Mathematics, and Science",
-    selected.flatMap(([label, subject]) => { const attained = students.filter((s) => subjectScore(s, subject) >= 5).length; return [share(`${label} at or above expected`, attained, students.length), share(`${label} below expected`, students.length - attained, students.length)]; }), "label", ["Attainment", "Below Expected"]);
+    selected.flatMap(([label, subject]) => { const assessed = students.filter((s) => subjectScore(s, subject) > 0); const attained = assessed.filter((s) => subjectScore(s, subject) >= 5).length; return [share(`${label} at or above expected`, attained, assessed.length), share(`${label} below expected`, assessed.length - attained, assessed.length)]; }), "label", ["Attainment", "Below Expected"]);
 }

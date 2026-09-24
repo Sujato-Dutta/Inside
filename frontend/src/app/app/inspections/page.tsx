@@ -5,21 +5,15 @@ import { useSessionData } from "@/context/SessionDataContext";
 import { calculateInspectionRubric } from "@/lib/engine/calculator";
 import { RubricIndicator } from "@/lib/engine/types";
 import { Button } from "@/components/ui/Button";
-import { AlertTriangle, Calculator, FileText, ShieldCheck } from "lucide-react";
+import { SlideOverPanel } from "@/components/inspection/SlideOverPanel";
+import { buildCat4RealityMap, ScreeningEvidence } from "@/lib/engine/screening";
+import { Calculator, FileText, ShieldCheck } from "lucide-react";
 
-const COLORS: Record<string, string> = {
-  Outstanding: "border-sky-200 bg-sky-50 text-sky-800",
-  "Very Good": "border-emerald-200 bg-emerald-50 text-emerald-800",
-  Good: "border-amber-200 bg-amber-50 text-amber-800",
-  Acceptable: "border-orange-200 bg-orange-50 text-orange-800",
-  Weak: "border-red-200 bg-red-50 text-red-800",
-  "Very Weak": "border-rose-300 bg-rose-100 text-rose-900",
-};
 const ROWS = [
   ["1.1 Attainment", "Students' Achievement"],
   ["1.2 Learning Progress", "Students' Progress"],
   ["1.3 Learning Skills", "Learning Skills"],
-  ["1.4 Students of Determination", "Inclusion / SEND"],
+  ["Inclusion / Students of Determination", "Inclusion / SEND"],
   ["2.1 Personal Development", "Personal Development"],
 ] as const;
 const PHASES = [
@@ -28,13 +22,13 @@ const PHASES = [
   ["Secondary", (year: number) => year >= 7 && year <= 11],
   ["Post-16", (year: number) => year >= 12],
 ] as const;
-const boundaries = [85, 75, 65, 55, 45];
-const isBorderline = (value: number) => boundaries.some((boundary) => Math.abs(value - boundary) <= 2);
-
 export default function InspectionsPage() {
   const { students, setPrefilledReportTemplate } = useSessionData();
   const router = useRouter();
-  const [framework, setFramework] = useState("KHDA / DSIB");
+  const [uplift, setUplift] = useState(0);
+  const [passGrade, setPassGrade] = useState(5);
+  const [evidence, setEvidence] = useState<ScreeningEvidence | null>(null);
+  const cat4Comparisons = useMemo(() => buildCat4RealityMap(students, passGrade), [students, passGrade]);
   const matrix = useMemo(() => {
     const phases = Object.fromEntries(PHASES.map(([label, test]) => {
       const cohort = students.filter((student) => test(student.yearGroup));
@@ -50,24 +44,23 @@ export default function InspectionsPage() {
     return { indicator: entry?.rubric.indicators.find((item: RubricIndicator) => item.name === row), count: entry?.count || 0 };
   };
   const active = getIndicator(selected.row, selected.phase);
+  const simulated = active.indicator?.denominator ? Math.round(Math.min(100, (active.indicator.numerator + uplift) / active.indicator.denominator * 100) * 10) / 10 : null;
   const exportSef = () => {
-    setPrefilledReportTemplate("Full Inspection Evidence Pack");
+    setPrefilledReportTemplate("Full DSIB/ADEK Evidence Pack");
     router.push("/app/reports");
   };
 
   return <div className="space-y-7 pb-16">
     <div className="flex flex-col gap-4 border-b border-[#E3DED4] pb-5 lg:flex-row lg:items-end lg:justify-between">
-      <div><div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[12px] font-bold text-orange-600"><ShieldCheck className="h-3.5 w-3.5" />Statutory compliance engine</div><h1 className="mt-2 text-3xl font-extrabold tracking-tight">Inspections</h1><p className="mt-1 max-w-2xl text-[14px] text-[#5C5852]">Click any phase cell to verify the exact local calculation and evidence range.</p></div>
+      <div><div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[12px] font-bold text-orange-600"><ShieldCheck className="h-3.5 w-3.5" />UAE framework evidence review</div><h1 className="mt-2 text-3xl font-extrabold tracking-tight">Inspections</h1><p className="mt-1 max-w-2xl text-[14px] text-[#5C5852]">Local indicators mapped to UAE inspection themes. Inspectors make official judgements using wider evidence, not a single percentage.</p></div>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-[12px] font-bold text-[#5C5852]" htmlFor="framework">Handbook</label>
-        <select id="framework" value={framework} onChange={(event) => setFramework(event.target.value)} className="h-10 rounded-xl border border-[#E3DED4] bg-white px-3 text-[13px] font-bold"><option>KHDA / DSIB</option><option>ADEK</option></select>
         <Button variant="primary" onClick={exportSef} icon={<FileText className="h-4 w-4" />}>Compile SEF Export</Button>
       </div>
     </div>
 
     <div className="grid gap-4 sm:grid-cols-3">
-      <div className="rounded-2xl border border-[#E3DED4] bg-white p-4"><p className="text-[11px] font-bold uppercase tracking-wider text-[#5C5852]">Framework</p><p className="mt-2 text-xl font-extrabold">{framework}</p><p className="mt-1 text-[12px] text-[#5C5852]">Controlled statutory handbook</p></div>
-      <div className="rounded-2xl border border-[#E3DED4] bg-white p-4"><p className="text-[11px] font-bold uppercase tracking-wider text-[#5C5852]">Whole-school rating</p><p className="mt-2 text-xl font-extrabold">{matrix.whole.overallBand}</p><p className="mt-1 text-[12px] text-[#5C5852]">{students.length} records evaluated</p></div>
+      <div className="rounded-2xl border border-[#E3DED4] bg-white p-4"><p className="text-[11px] font-bold uppercase tracking-wider text-[#5C5852]">Framework</p><p className="mt-2 text-xl font-extrabold">UAE unified</p><p className="mt-1 text-[12px] text-[#5C5852]">Evidence themes used in Dubai and Abu Dhabi; not an authority-issued rating</p></div>
+      <div className="rounded-2xl border border-[#E3DED4] bg-white p-4"><p className="text-[11px] font-bold uppercase tracking-wider text-[#5C5852]">Official rating</p><p className="mt-2 text-xl font-extrabold">Not assessed</p><p className="mt-1 text-[12px] text-[#5C5852]">{students.length} local records available; no automated inspection grade</p></div>
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Calculation mode</p><p className="mt-2 text-xl font-extrabold text-emerald-900">Deterministic</p><p className="mt-1 text-[12px] text-emerald-800">Zero LLM-generated grades</p></div>
     </div>
 
@@ -79,28 +72,32 @@ export default function InspectionsPage() {
             const cell = getIndicator(row, phase);
             const indicator = cell.indicator;
             const activeCell = selected.row === row && selected.phase === phase;
-            return <td key={phase} className="p-2 text-center"><button disabled={!cell.count} onClick={() => setSelected({ row, phase })} className={"relative mx-auto min-h-16 w-full max-w-[132px] rounded-xl border p-2 transition " + (!cell.count ? "cursor-not-allowed border-[#E3DED4] bg-[#F5F2EB] text-[#8C877E]" : (COLORS[indicator?.band || "Acceptable"] + (activeCell ? " ring-2 ring-orange-400 ring-offset-2" : " hover:-translate-y-0.5")))}>
-              <span className="block text-[11px] font-extrabold">{cell.count ? indicator?.band : "No evidence"}</span><span className="mt-1 block text-[11px] font-semibold">{cell.count ? `${indicator?.calculatedValue}${indicator?.unit}` : "0 records"}</span>
-              {indicator && isBorderline(indicator.calculatedValue) && <span title="Within 2% of a statutory boundary" className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white"><AlertTriangle className="h-3 w-3" /></span>}
+            return <td key={phase} className="p-2 text-center"><button disabled={!cell.count} onClick={() => { setSelected({ row, phase }); setUplift(0); }} className={"relative mx-auto min-h-16 w-full max-w-[132px] rounded-xl border p-2 transition " + (!cell.count ? "cursor-not-allowed border-[#E3DED4] bg-[#F5F2EB] text-[#8C877E]" : ("border-orange-200 bg-orange-50 text-orange-900" + (activeCell ? " ring-2 ring-orange-400 ring-offset-2" : " hover:-translate-y-0.5")))}>
+              <span className="block text-[11px] font-extrabold">{indicator?.denominator ? "Evidence only" : "No evidence"}</span><span className="mt-1 block text-[11px] font-semibold">{indicator?.denominator ? `${indicator.calculatedValue}${indicator.unit}` : "0 assessed"}</span>
             </button></td>;
           })}</tr>)}</tbody>
       </table></div>
     </section>
+    {cat4Comparisons.length > 0 && <section className="rounded-3xl border border-[#E3DED4] bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[11px] font-extrabold uppercase tracking-wider text-orange-700">CAT4 Reality Map (Baseline Comparison Index)</p><h2 className="mt-1 text-xl font-extrabold">Cognitive baseline alongside internal marks</h2><p className="mt-1 max-w-2xl text-xs text-[#5C5852]">Screening indicator comparing internal grades to cognitive baseline; not a causal or predicted grade measure. These are Inside-defined categories, not official inspection formulas.</p></div><label className="text-xs font-bold text-[#5C5852]">Pass mark (Grade 5+ by default)<input type="number" min={0} max={9} step={0.5} value={passGrade} onChange={(event) => { const value = Number(event.target.value); if (Number.isFinite(value)) setPassGrade(Math.max(0, Math.min(9, value))); }} className="mt-1 block w-24 rounded-lg border border-[#D6D0C4] px-3 py-2 text-sm" /></label></div>
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">{cat4Comparisons.map((item) => <article key={item.subject} className="rounded-2xl border border-[#E8E2D9] bg-[#FBF9F5] p-4"><div className="flex items-start justify-between gap-2"><h3 className="font-extrabold">{item.subject === "math" ? "Maths" : item.subject[0].toUpperCase() + item.subject.slice(1)}</h3><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${item.evidence.tone === "neutral" ? "bg-emerald-50 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{item.evidence.tone === "neutral" ? "No threshold triggered" : "Screening threshold triggered"}</span></div><p className="mt-2 text-xs text-[#5C5852]">CAT4-eligible cohort: <strong>{item.cohort}</strong> students</p><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><p className="text-lg font-extrabold">{item.passRate}%</p><p className="text-[10px] text-[#5C5852]">Grade {passGrade}+</p></div><div><p className="text-lg font-extrabold">{item.baselineRate}%</p><p className="text-[10px] text-[#5C5852]">SAS ≥ 90</p></div><div><p className="text-lg font-extrabold">{item.variance >= 0 ? "+" : ""}{item.variance} pp</p><p className="text-[10px] text-[#5C5852]">Variance</p></div></div><p className="mt-3 text-[11px] text-[#5C5852]">Higher ≥112: {item.higher} · Expected 90–111: {item.expected} · Lower &lt;90: {item.lower}</p><p className="mt-2 text-xs leading-relaxed">{item.evidence.summary}</p><button type="button" onClick={() => setEvidence(item.evidence)} className="mt-3 rounded-lg border border-orange-200 bg-white px-3 py-2 text-xs font-extrabold text-orange-700 hover:bg-orange-50">Show Evidence</button></article>)}</div>
+    </section>}
 
     <section className="rounded-3xl border border-orange-200 bg-orange-50/50 p-5 sm:p-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[11px] font-extrabold uppercase tracking-wider text-orange-700">Verified statutory math audit trail</p><h2 className="mt-1 text-lg font-extrabold">{selected.phase} | {ROWS.find((row) => row[1] === selected.row)?.[0]}</h2></div><span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">{active.count} records in evidence range</span></div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[11px] font-extrabold uppercase tracking-wider text-orange-700">Local calculation audit trail</p><h2 className="mt-1 text-lg font-extrabold">{selected.phase} | {ROWS.find((row) => row[1] === selected.row)?.[0]}</h2></div><span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">{active.count} pupil records in phase</span></div>
       {active.indicator ? <div className="mt-5 space-y-4">
         <div className="rounded-xl border border-[#E3DED4] bg-white p-4 font-mono text-[13px]"><Calculator className="mr-2 inline h-4 w-4 text-orange-600" />{active.indicator.formula}</div>
         <div className="grid gap-3 sm:grid-cols-4">{[
           ["Numerator", active.indicator.numerator],
           ["Denominator", active.indicator.denominator],
           ["Verified result", `${active.indicator.calculatedValue}${active.indicator.unit}`],
-          ["Assigned tier", active.indicator.band],
+          ["Official judgement", "Not determined"],
         ].map(([label, value]) => <div key={String(label)} className="rounded-xl border border-[#E3DED4] bg-white p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#5C5852]">{label}</p><p className="mt-1 text-lg font-extrabold">{value}</p></div>)}</div>
-        {isBorderline(active.indicator.calculatedValue) && <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-semibold text-amber-900"><AlertTriangle className="h-4 w-4" />Borderline risk: this result is within 2 percentage points of a statutory threshold.</div>}
+        {selected.row === "Students' Achievement" && active.indicator.denominator > 0 && <div className="rounded-xl border border-[#E3DED4] bg-white p-4"><p className="text-[12px] font-bold">What-if: pupils reaching the measured reference (+1 grade step)</p><div className="mt-2 flex items-center gap-3"><button type="button" onClick={() => setUplift(Math.max(0, uplift - 1))} className="rounded-lg border px-3 py-1" aria-label="Decrease simulated pupils">−</button><span>{uplift}</span><button type="button" onClick={() => setUplift(Math.min(10, active.indicator!.denominator - active.indicator!.numerator, uplift + 1))} className="rounded-lg border px-3 py-1" aria-label="Increase simulated pupils">+</button><span className="text-xs text-[#5C5852]">up to 10; no pupil data is changed</span></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><p>Actual: {active.indicator.calculatedValue}% · official grade not determined</p><p>Scenario: {simulated}% · official grade not determined</p></div></div>}
         <p className="text-[12px] text-[#5C5852]">{active.indicator.description}</p>
       </div> : <p className="mt-4 text-[13px] text-[#5C5852]">No pupil records are loaded for this phase; Inside does not infer a grade.</p>}
-      <div className="mt-5 flex items-center gap-2 border-t border-orange-200 pt-4 text-[12px] font-bold text-emerald-800"><ShieldCheck className="h-4 w-4" />100% deterministic local memory execution. Zero stochastic estimation.</div>
+      <div className="mt-5 flex items-center gap-2 border-t border-orange-200 pt-4 text-[12px] font-bold text-emerald-800"><ShieldCheck className="h-4 w-4" />Deterministic local evidence only. <a className="underline" href="https://www.moe.gov.ae/documents/en/frameworkbooken.pdf" target="_blank" rel="noreferrer">Read the official UAE School Inspection Framework</a>.</div>
     </section>
+    <SlideOverPanel evidence={evidence} onClose={() => setEvidence(null)} />
   </div>;
 }

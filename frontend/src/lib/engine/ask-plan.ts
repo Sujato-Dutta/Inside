@@ -37,8 +37,8 @@ export interface AskPlan {
 export function canonicalQuestion(plan: AskPlan): string | null {
   const subject = plan.subject && plan.subject !== "All" ? plan.subject : "core subjects";
   switch (plan.analysis) {
-    case "core_attainment": return `${subject} attainment against the DSIB benchmark`;
-    case "phase_attainment": return "phase attainment against the DSIB benchmark";
+    case "core_attainment": return `${subject} attainment against the school's internal reference`;
+    case "phase_attainment": return "phase attainment against the school's internal reference";
     case "send_progress": return "SEND progress compared with non-SEND peers";
     case "send_subject": return `SEND ${subject} attainment compared with non-SEND peers`;
     case "send_attendance": return "SEND attendance below 90% and attainment";

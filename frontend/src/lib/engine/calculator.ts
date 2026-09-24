@@ -1034,21 +1034,13 @@ export function calculateReportMetrics(
 }
 
 // ═══════════════════════════════════════════════════════════
-// INSPECTION RUBRIC: Statutory Compliance Grading Engine
+// INSPECTION RUBRIC: deterministic UAE framework evidence indicators (not official grades)
 // Strict deterministic — NO LLM involvement
 // ═══════════════════════════════════════════════════════════
 
-const BAND_LABELS = ["Outstanding", "Very Good", "Good", "Acceptable", "Weak", "Very Weak"];
-
-function assignBand(value: number, thresholds: number[]): { band: string; bandIndex: number } {
-  // thresholds = [outstanding, veryGood, good, acceptable, weak]
-  // e.g. [90, 80, 70, 60, 50] means >=90 Outstanding, >=80 Very Good, etc.
-  if (value >= thresholds[0]) return { band: "Outstanding", bandIndex: 0 };
-  if (value >= thresholds[1]) return { band: "Very Good", bandIndex: 1 };
-  if (value >= thresholds[2]) return { band: "Good", bandIndex: 2 };
-  if (value >= thresholds[3]) return { band: "Acceptable", bandIndex: 3 };
-  if (value >= thresholds[4]) return { band: "Weak", bandIndex: 4 };
-  return { band: "Very Weak", bandIndex: 5 };
+function assignBand(_value: number, _thresholds: number[]): { band: string; bandIndex: number } {
+  // The UAE framework does not assign an inspection grade from a single percentage.
+  return { band: "Evidence only", bandIndex: -1 };
 }
 
 export function calculateInspectionRubric(students: StudentRecord[]): InspectionRubric {
@@ -1066,10 +1058,11 @@ export function calculateInspectionRubric(students: StudentRecord[]): Inspection
   const indicators: RubricIndicator[] = [];
 
   // 1. Students' Achievement: % at/above Grade 5 benchmark
-  const atBenchmark = students.filter(
+  const assessed = students.filter((s) => [s.term2MathGrade ?? s.mathGrade, s.term2ScienceGrade ?? s.scienceGrade, s.term2EnglishGrade ?? s.englishGrade].some((grade) => grade > 0));
+  const atBenchmark = assessed.filter(
     (s) => ((s.term2MathGrade ?? s.mathGrade) + (s.term2ScienceGrade ?? s.scienceGrade) + (s.term2EnglishGrade ?? s.englishGrade)) / 3 >= 5
   ).length;
-  const achievementPct = (atBenchmark / total) * 100;
+  const achievementPct = assessed.length ? (atBenchmark / assessed.length) * 100 : 0;
   const achieveBand = assignBand(achievementPct, [90, 80, 70, 60, 50]);
   indicators.push({
     name: "Students' Achievement",
@@ -1080,17 +1073,18 @@ export function calculateInspectionRubric(students: StudentRecord[]): Inspection
     bandIndex: achieveBand.bandIndex,
     formula: "count(avg(T2 Math, T2 Science, T2 English) ≥ 5) / total × 100",
     numerator: atBenchmark,
-    denominator: total,
-    description: `${atBenchmark} of ${total} students achieve an average grade of 5 or above across core subjects.`,
+    denominator: assessed.length,
+    description: `${atBenchmark} of ${assessed.length} pupils with core results reach the school's Grade 5 reference. This does not establish an official curriculum-standard judgement.`,
   });
 
   // 2. Progress: % showing positive T1→T2 grade trajectory
-  const showingProgress = students.filter((s) => {
+  const progressEligible = students.filter((s) => [s.term1MathGrade, s.term1ScienceGrade, s.term1EnglishGrade, s.term2MathGrade, s.term2ScienceGrade, s.term2EnglishGrade].every((grade) => grade !== undefined && grade !== null));
+  const showingProgress = progressEligible.filter((s) => {
     const t1Avg = ((s.term1MathGrade ?? s.mathGrade) + (s.term1ScienceGrade ?? s.scienceGrade) + (s.term1EnglishGrade ?? s.englishGrade)) / 3;
     const t2Avg = ((s.term2MathGrade ?? s.mathGrade) + (s.term2ScienceGrade ?? s.scienceGrade) + (s.term2EnglishGrade ?? s.englishGrade)) / 3;
     return t2Avg >= t1Avg;
   }).length;
-  const progressPct = (showingProgress / total) * 100;
+  const progressPct = progressEligible.length ? (showingProgress / progressEligible.length) * 100 : 0;
   const progressBand = assignBand(progressPct, [85, 75, 65, 55, 45]);
   indicators.push({
     name: "Students' Progress",
@@ -1101,12 +1095,12 @@ export function calculateInspectionRubric(students: StudentRecord[]): Inspection
     bandIndex: progressBand.bandIndex,
     formula: "count(avg T2 grades ≥ avg T1 grades) / total × 100",
     numerator: showingProgress,
-    denominator: total,
-    description: `${showingProgress} of ${total} students show stable or positive grade trajectory from Term 1 to Term 2.`,
+    denominator: progressEligible.length,
+    description: `${showingProgress} of ${progressEligible.length} pupils with both term results show stable or positive grade trajectory. The official framework also requires comparison with starting points and curriculum standards.`,
   });
 
   // 3. Inclusion / SEND: SEND cohort value-added (positive progress %)
-  const sendStudents = students.filter((s) => s.inclusionSend && s.inclusionSend !== "None");
+  const sendStudents = progressEligible.filter((s) => s.senStatus || (s.inclusionSend && s.inclusionSend !== "None"));
   const sendTotal = sendStudents.length;
   const sendProgressing = sendStudents.filter((s) => {
     const t1Avg = ((s.term1MathGrade ?? s.mathGrade) + (s.term1ScienceGrade ?? s.scienceGrade) + (s.term1EnglishGrade ?? s.englishGrade)) / 3;
@@ -1129,12 +1123,13 @@ export function calculateInspectionRubric(students: StudentRecord[]): Inspection
   });
 
   // 4. Learning Skills: inverse of missing assignments / behaviour issues
-  const totalPossibleIssues = total * 2; // max 2 issue types per student
-  const totalIssues = students.reduce(
+  const engagementEligible = students.filter((s) => s.missingAssignments !== undefined || s.behaviourIncidents !== undefined);
+  const totalPossibleIssues = engagementEligible.length * 2; // max 2 issue types per student
+  const totalIssues = engagementEligible.reduce(
     (a, s) => a + Math.min(s.missingAssignments ?? 0, 5) + Math.min(s.behaviourIncidents ?? 0, 5),
     0
   );
-  const learningSkillsPct = ((1 - totalIssues / (totalPossibleIssues * 5)) * 100);
+  const learningSkillsPct = totalPossibleIssues ? ((1 - totalIssues / (totalPossibleIssues * 5)) * 100) : 0;
   const clampedLS = Math.max(0, Math.min(100, learningSkillsPct));
   const lsBand = assignBand(clampedLS, [90, 80, 70, 60, 50]);
   indicators.push({
@@ -1147,7 +1142,7 @@ export function calculateInspectionRubric(students: StudentRecord[]): Inspection
     formula: "(1 - sum(capped missing + behaviour) / max possible) × 100",
     numerator: totalPossibleIssues * 5 - totalIssues,
     denominator: totalPossibleIssues * 5,
-    description: `Learning engagement score based on assignment completion and behaviour across ${total} students.`,
+    description: `Internal engagement proxy from ${engagementEligible.length} pupils; official learning-skills judgements also require lesson evidence.`,
   });
 
   // 5. Personal Development: Attendance ≥90% cohort share
@@ -1164,28 +1159,13 @@ export function calculateInspectionRubric(students: StudentRecord[]): Inspection
     formula: "count(attendance ≥ 90%) / total × 100",
     numerator: goodAttendance,
     denominator: total,
-    description: `${goodAttendance} of ${total} students maintain 90%+ attendance, indicating positive personal development.`,
+    description: `${goodAttendance} of ${total} pupils maintain 90%+ attendance. This is an attendance indicator, not an official personal-development judgement.`,
   });
-
-  // Overall band: mode of all indicator bands (or worst if tied)
-  const bandCounts = new Array(6).fill(0);
-  indicators.forEach((ind) => {
-    if (ind.bandIndex >= 0 && ind.bandIndex <= 5) bandCounts[ind.bandIndex]++;
-  });
-  // Find the most common band; on tie, pick the worse one (higher index)
-  let overallBandIndex = 0;
-  let maxCount = 0;
-  for (let i = 0; i < 6; i++) {
-    if (bandCounts[i] >= maxCount) {
-      maxCount = bandCounts[i];
-      overallBandIndex = i;
-    }
-  }
 
   return {
     indicators,
-    overallBand: BAND_LABELS[overallBandIndex],
-    overallBandIndex,
+    overallBand: "Not assessed",
+    overallBandIndex: -1,
     timestamp: new Date().toISOString(),
     studentCount: total,
   };

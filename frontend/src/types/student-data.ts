@@ -21,6 +21,10 @@ export interface StudentRecord {
   cat4Quantitative?: number;
   cat4Spatial?: number;
   cat4Mean?: number;
+  cat4_sas?: number | null;
+  /** Presence flags preserve valid zero marks without treating missing marks as zero. */
+  assessmentPresent?: { math: boolean; english: boolean; science: boolean };
+  attendancePresent?: boolean;
   cat4Stanine?: number;
   predictedMathGrade?: number;
   predictedScienceGrade?: number;

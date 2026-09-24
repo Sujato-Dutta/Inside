@@ -64,7 +64,7 @@ export default function DataHubPage() {
 
   return (
     <div className="space-y-7 pb-16">
-      <input ref={inputRef} type="file" multiple accept=".csv,.tsv,.xlsx" className="hidden" onChange={(e) => processFiles(Array.from(e.target.files || []))} />
+      <input ref={inputRef} type="file" multiple accept=".csv,.tsv,.txt,.json,.xlsx" className="hidden" onChange={(e) => processFiles(Array.from(e.target.files || []))} />
       <div className="flex flex-col gap-4 border-b border-[#E3DED4] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[12px] font-bold text-orange-600"><Database className="h-3.5 w-3.5" />Secure ingestion & hygiene control room</div>
@@ -78,7 +78,7 @@ export default function DataHubPage() {
         className={"rounded-3xl border-2 border-dashed p-8 text-center transition " + (dragging ? "border-orange-500 bg-orange-50" : "border-[#D6D0C4] bg-white")}>
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-200 bg-orange-50 text-orange-600"><Upload className="h-5 w-5" /></div>
         <h2 className="mt-4 text-lg font-extrabold">Drop all source files together</h2>
-        <p className="mx-auto mt-1 max-w-xl text-[13px] text-[#5C5852]">CSV, TSV, and XLSX from SIMS, iSAMS, Bromcom, or Engage. Files are read with the browser FileReader API only.</p>
+        <p className="mx-auto mt-1 max-w-xl text-[13px] text-[#5C5852]">XLSX (all pupil-data sheets), CSV, TSV, delimited TXT, or JSON arrays from school systems. Files stay in this browser session. Legacy XLS, PDFs, and arbitrary documents need conversion to a pupil table first.</p>
         <Button className="mt-5" variant="primary" onClick={() => inputRef.current?.click()} disabled={processing} icon={<FileSpreadsheet className="h-4 w-4" />}>{processing ? "Validating in memory..." : "Choose multiple files"}</Button>
         {error && <p className="mt-3 text-[13px] font-semibold text-red-700">{error}</p>}
       </div>
@@ -95,6 +95,17 @@ export default function DataHubPage() {
         <div className={"flex h-9 w-9 items-center justify-center rounded-xl " + color}><Icon className="h-4 w-4" /></div>
         <div className="mt-4 text-2xl font-extrabold">{String(value)}</div><div className="text-[12px] font-bold uppercase tracking-wider text-[#5C5852]">{label}</div>
       </div>)}</div>
+      {staged && <section className="rounded-3xl border border-[#E3DED4] bg-white p-5 shadow-sm sm:p-6" aria-label="Data Trust and Health Audit">
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[11px] font-extrabold uppercase tracking-wider text-orange-600">Data Trust &amp; Health Audit</p><h2 className="mt-1 text-xl font-extrabold">Quality before analysis</h2><p className="mt-1 text-xs text-[#5C5852]">Calculated on joined pupil records before commit. Duplicates count only within the same source sheet; cross-sheet matches are expected.</p></div><span className="rounded-xl bg-orange-50 px-4 py-2 text-lg font-extrabold text-orange-800">{staged.dataTrust.overallHealth.toFixed(2)}% overall</span></div>
+        <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[
+          ["Identity integrity", staged.dataTrust.identityIntegrity, `${staged.dataTrust.duplicateRefs} duplicate references / ${staged.dataTrust.scannedRows} rows`],
+          ["Required fields", staged.dataTrust.requiredFieldsCompleteness, `${staged.dataTrust.requiredValues} / ${staged.dataTrust.possibleRequiredValues} present values`],
+          ["Assessment completeness", staged.dataTrust.assessmentCompleteness, `${staged.dataTrust.availableCoreMarks} / ${staged.dataTrust.eligiblePupils * 3} Year 1–11 core marks`],
+          ["CAT4 availability · informational", staged.dataTrust.cat4Availability, "Not included in overall health"],
+        ].map(([label, value, detail]) => <div key={String(label)} className="rounded-xl border border-[#E8E2D9] bg-[#FBF9F5] p-4"><dt className="text-xs font-bold text-[#5C5852]">{label}</dt><dd className="mt-2 text-xl font-extrabold">{Number(value).toFixed(2)}%</dd><p className="mt-1 text-[11px] text-[#6B665E]">{detail}</p></div>)}</dl>
+        <p className="mt-4 border-t border-[#E8E2D9] pt-3 text-xs font-semibold text-[#5C5852]">Overall = identity × 40% + required fields × 40% + assessment × 20%. CAT4 is informational only.</p>
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900"><p className="font-bold">🔐 Local Browser Memory Only | No Cloud Upload · Zero-Retention Processing</p><p className="mt-1">Designed with UAE data-protection requirements in mind; this design statement is not a legal compliance certification.</p></div>
+      </section>}
       {staged && <div className="overflow-hidden rounded-3xl border border-[#E3DED4] bg-white shadow-sm">
         <div className="flex flex-col gap-2 border-b border-[#E3DED4] bg-[#F9F6F0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="font-extrabold">Automated schema mapping</h2><p className="text-[12px] text-[#5C5852]">Review score bases before the commit gateway.</p></div>
@@ -110,7 +121,7 @@ export default function DataHubPage() {
             <td className="p-3 text-[#5C5852]">{mapping.normalization}</td></tr>)}</tbody>
         </table></div>
         <div className="flex flex-col gap-3 border-t border-[#E3DED4] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[12px] font-semibold text-emerald-800"><Lock className="mr-1 inline h-3.5 w-3.5" />FileReader API reads client-side only | Zero data touches disk or cloud DB</p>
+          <p className="text-[12px] font-semibold text-emerald-800"><Lock className="mr-1 inline h-3.5 w-3.5" />Browser file APIs read client-side only | No source file is sent to our server</p>
           <Button variant="primary" onClick={requestCommit} icon={<CheckCircle2 className="h-4 w-4" />}>Commit Dataset to Executive Memory</Button>
         </div>
       </div>}

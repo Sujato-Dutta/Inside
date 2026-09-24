@@ -11,7 +11,7 @@ import { analyzeStatutoryQuery, analyzeCohortMetric, analyzeRecordList, analyzeA
 import { AskPlan, canonicalQuestion } from "@/lib/engine/ask-plan";
 
 const STARTERS = [
-  "How does whole-school attainment compare with the 75% DSIB reference?",
+  "How does whole-school attainment compare with our 75% internal reference?",
   "What is the progress gap between SEND pupils and their peers?",
   "How does persistent absence relate to current attainment?",
   "Are our source files mapped and free of duplicate pupil references?",
