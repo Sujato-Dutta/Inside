@@ -78,11 +78,11 @@ function AppNavbar() {
           {!sessionDeleted && (
             <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[13px] font-medium">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Zero-Retention Active</span>
+              <span>Browser memory active</span>
               <span className="text-[#8C877E]">•</span>
               <span className="flex items-center gap-1 font-semibold">
                 <Clock className="w-3 h-3" />
-                {sessionMinutesRemaining}m left
+                {sessionMinutesRemaining}m timer
               </span>
             </div>
           )}

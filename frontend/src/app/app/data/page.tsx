@@ -54,12 +54,13 @@ export default function DataHubPage() {
   const healthStats: Array<{
     label: string;
     value: number;
+    detail?: string;
     Icon: React.ComponentType<{ className?: string }>;
     color: string;
   }> = [
-    { label: "Valid pupil records", value: validRecords, Icon: CheckCircle2, color: "text-emerald-700 bg-emerald-50" },
-    { label: "Repaired cell anomalies", value: staged?.repairedCells || 0, Icon: Wrench, color: "text-amber-700 bg-amber-50" },
-    { label: "Unmapped / dropped", value: unmapped + (staged?.droppedRows || 0), Icon: AlertTriangle, color: "text-red-700 bg-red-50" },
+    { label: staged ? "Pupil records staged" : "Records loaded", value: validRecords, Icon: CheckCircle2, color: "text-emerald-700 bg-emerald-50" },
+    { label: "Cells repaired", value: staged?.repairedCells || 0, Icon: Wrench, color: "text-amber-700 bg-amber-50" },
+    { label: "Data quality flags", value: unmapped + (staged?.droppedRows || 0), detail: `${unmapped} unmapped headers · ${staged?.droppedRows || 0} excluded rows`, Icon: AlertTriangle, color: "text-red-700 bg-red-50" },
   ];
 
   return (
@@ -69,7 +70,7 @@ export default function DataHubPage() {
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[12px] font-bold text-orange-600"><Database className="h-3.5 w-3.5" />Secure ingestion & hygiene control room</div>
           <h1 className="text-3xl font-extrabold tracking-tight">Data Hub</h1>
-          <p className="mt-1 max-w-2xl text-[14px] text-[#5C5852]">Join MIS, marks, SEND, and attendance files by pupil reference. Nothing is uploaded.</p>
+          <p className="mt-1 max-w-2xl text-[14px] text-[#5C5852]">Join MIS, marks, SEND, and attendance files by pupil reference. Source files are read in this browser session.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={downloadAudit} disabled={!staged} icon={<Download className="h-4 w-4" />}>Download hygiene log</Button>
       </div>
@@ -91,9 +92,9 @@ export default function DataHubPage() {
             <Button variant="outline" size="sm" onClick={() => setPurgeOpen(true)} className="border-red-200 text-red-700 hover:bg-red-50" icon={<Trash2 className="h-4 w-4" />}>Purge RAM immediately</Button></div>
         </div>
       </div>}
-      <div className="grid gap-4 sm:grid-cols-3">{healthStats.map(({ label, value, Icon, color }) => <div key={label} className="rounded-2xl border border-[#E3DED4] bg-white p-5 shadow-sm">
+      <div className="grid gap-4 sm:grid-cols-3">{healthStats.map(({ label, value, detail, Icon, color }) => <div key={label} className="rounded-2xl border border-[#E3DED4] bg-white p-5 shadow-sm">
         <div className={"flex h-9 w-9 items-center justify-center rounded-xl " + color}><Icon className="h-4 w-4" /></div>
-        <div className="mt-4 text-2xl font-extrabold">{String(value)}</div><div className="text-[12px] font-bold uppercase tracking-wider text-[#5C5852]">{label}</div>
+        <div className="mt-4 text-2xl font-extrabold">{String(value)}</div><div className="text-[12px] font-bold uppercase tracking-wider text-[#5C5852]">{label}</div>{detail && <p className="mt-1 text-[11px] text-[#5C5852]">{detail}</p>}
       </div>)}</div>
       {staged && <section className="rounded-3xl border border-[#E3DED4] bg-white p-5 shadow-sm sm:p-6" aria-label="Data Trust and Health Audit">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[11px] font-extrabold uppercase tracking-wider text-orange-600">Data Trust &amp; Health Audit</p><h2 className="mt-1 text-xl font-extrabold">Quality before analysis</h2><p className="mt-1 text-xs text-[#5C5852]">Calculated on joined pupil records before commit. Duplicates count only within the same source sheet; cross-sheet matches are expected.</p></div><span className="rounded-xl bg-orange-50 px-4 py-2 text-lg font-extrabold text-orange-800">{staged.dataTrust.overallHealth.toFixed(2)}% overall</span></div>
@@ -104,7 +105,7 @@ export default function DataHubPage() {
           ["CAT4 availability · informational", staged.dataTrust.cat4Availability, "Not included in overall health"],
         ].map(([label, value, detail]) => <div key={String(label)} className="rounded-xl border border-[#E8E2D9] bg-[#FBF9F5] p-4"><dt className="text-xs font-bold text-[#5C5852]">{label}</dt><dd className="mt-2 text-xl font-extrabold">{Number(value).toFixed(2)}%</dd><p className="mt-1 text-[11px] text-[#6B665E]">{detail}</p></div>)}</dl>
         <p className="mt-4 border-t border-[#E8E2D9] pt-3 text-xs font-semibold text-[#5C5852]">Overall = identity × 40% + required fields × 40% + assessment × 20%. CAT4 is informational only.</p>
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900"><p className="font-bold">🔐 Local Browser Memory Only | No Cloud Upload · Zero-Retention Processing</p><p className="mt-1">Designed with UAE data-protection requirements in mind; this design statement is not a legal compliance certification.</p></div>
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900"><p className="font-bold">Your pupil files remain in this browser session.</p><p className="mt-1">File parsing, joining, quality checks, and calculations use the active dataset locally. This screen does not upload pupil files or rows. Ask Inside sends general question text to Groq, so avoid entering names, references, or raw figures there.</p></div>
       </section>}
       {staged && <div className="overflow-hidden rounded-3xl border border-[#E3DED4] bg-white shadow-sm">
         <div className="flex flex-col gap-2 border-b border-[#E3DED4] bg-[#F9F6F0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -140,7 +141,7 @@ export default function DataHubPage() {
         <p className="text-[14px] text-[#5C5852]">This immediately removes loaded records, answers, and file metadata from the active browser session.</p>
         <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setPurgeOpen(false)}>Cancel</Button><Button variant="primary" className="bg-red-600" onClick={() => { deleteSessionDataNow(); setStaged(null); setPurgeOpen(false); }}>Purge all data</Button></div>
       </Modal>
-      <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-[12px] text-emerald-900"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><p><strong>School-owned data:</strong> raw identifiers remain only in volatile browser memory for local cross-sheet joins. Displayed references are SHA-256 pseudonyms, and no pupil row is sent to an AI service.</p></div>
+      <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-[12px] text-emerald-900"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><p><strong>Where pupil data goes:</strong> source files and joined pupil rows stay in the active browser session. Actual source references are visible locally in the evidence views. This Data Hub does not send pupil rows to an AI service.</p></div>
     </div>
   );
 }

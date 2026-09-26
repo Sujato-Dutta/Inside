@@ -10,13 +10,6 @@ import { ConversationAnswer } from "@/components/ask/ConversationAnswer";
 import { analyzeStatutoryQuery, analyzeCohortMetric, analyzeRecordList, analyzeAdvice, clarificationResult } from "@/lib/engine/statutory-analysis";
 import { AskPlan, canonicalQuestion } from "@/lib/engine/ask-plan";
 
-const STARTERS = [
-  "How does whole-school attainment compare with our 75% internal reference?",
-  "What is the progress gap between SEND pupils and their peers?",
-  "How does persistent absence relate to current attainment?",
-  "Are our source files mapped and free of duplicate pupil references?",
-];
-
 export default function AskInsidePage() {
   const { students, activeFiles, readinessScore, prefilledQuery, setPrefilledQuery, setPrefilledReportTemplate, askExchanges, addAskExchange, resetAskConversation } = useSessionData();
   const router = useRouter();
@@ -124,6 +117,18 @@ export default function AskInsidePage() {
     setPrefilledReportTemplate(/send|inclusion/i.test(question) ? "Inclusion & SEND Gap Audit" : "Full Inspection Evidence Pack");
     router.push("/app/reports");
   };
+  const starters = [
+    "How does whole-school attainment compare with our 75% internal reference?",
+    students.some((student) => student.senStatus || student.inclusionSend && student.inclusionSend !== "None")
+      ? "What is the observed progress gap between SEND pupils and their peers?"
+      : "Compare current attainment across English, Mathematics, and Science.",
+    students.some((student) => student.attendanceRate < 90)
+      ? "How does persistent absence relate to current attainment?"
+      : "Are our source files mapped and free of duplicate pupil references?",
+    students.some((student) => student.emiratiStatus)
+      ? "How does Emirati pupil attainment compare with other pupils?"
+      : "Which pupils have the lowest current core grades?",
+  ];
 
   return <div className="mx-auto flex min-h-[calc(100vh-11rem)] max-w-4xl flex-col pb-4">
     <div className="flex items-center justify-between border-b border-[#E3DED4] pb-4">
@@ -139,7 +144,8 @@ export default function AskInsidePage() {
         <h2 className="mt-5 text-2xl font-extrabold tracking-tight sm:text-3xl">What would you like to understand?</h2>
         <p className="mt-2 max-w-xl text-sm text-[#5C5852]">Ask about your current school data. Inside will show the evidence behind each answer.</p>
         {!students.length && <Link href="/app/data" className="mt-5 rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white">Upload data to begin</Link>}
-        <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-2">{STARTERS.map((prompt) => <button key={prompt} type="button" disabled={!students.length || pending} onClick={() => submit(prompt)} className="flex min-h-24 items-start justify-between gap-3 rounded-2xl border border-[#E3DED4] bg-white p-4 text-left text-sm font-semibold leading-relaxed shadow-sm transition hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"><span>{prompt}</span><ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" /></button>)}</div>
+        <p className="mt-7 text-[11px] font-bold uppercase tracking-wider text-[#817B71]">Suggested from current evidence</p>
+        <div className="mt-3 grid w-full max-w-2xl gap-3 sm:grid-cols-2">{starters.map((prompt) => <button key={prompt} type="button" disabled={!students.length || pending} onClick={() => submit(prompt)} className="flex min-h-24 items-start justify-between gap-3 rounded-2xl border border-[#E3DED4] bg-white p-4 text-left text-sm font-semibold leading-relaxed shadow-sm transition hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"><span>{prompt}</span><ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" /></button>)}</div>
       </div> : <div className="space-y-10 py-8">{askExchanges.map((exchange) => <ConversationAnswer key={exchange.id} exchange={exchange} students={students} onSave={saveToReport} animate={exchange.id === revealExchangeId} />)}{pendingTurn && <div key={pendingTurn.id} ref={pendingAnchorRef} className="space-y-5 scroll-mb-40">
         <div className="flex justify-end"><p className="max-w-[85%] rounded-3xl rounded-br-md bg-[#EFEAE1] px-4 py-3 text-sm font-semibold leading-relaxed sm:max-w-[75%]">{pendingTurn.question}</p></div>
         <div className="flex items-center gap-3 sm:gap-4" role="status"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-600 text-xs font-black text-white">IN</span><span className="text-sm text-[#5C5852]">Thinking<span className="inline-block animate-pulse">…</span></span></div>

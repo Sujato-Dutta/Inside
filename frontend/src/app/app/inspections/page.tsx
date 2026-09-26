@@ -7,7 +7,7 @@ import { RubricIndicator } from "@/lib/engine/types";
 import { Button } from "@/components/ui/Button";
 import { SlideOverPanel } from "@/components/inspection/SlideOverPanel";
 import { buildCat4RealityMap, ScreeningEvidence } from "@/lib/engine/screening";
-import { Calculator, FileText, ShieldCheck } from "lucide-react";
+import { ArrowRight, Calculator, FileText, ShieldCheck } from "lucide-react";
 
 const ROWS = [
   ["1.1 Attainment", "Students' Achievement"],
@@ -22,8 +22,15 @@ const PHASES = [
   ["Secondary", (year: number) => year >= 7 && year <= 11],
   ["Post-16", (year: number) => year >= 12],
 ] as const;
+const PREPARATION: Record<string, { question: string; evidence: string; ask?: string }> = {
+  "Students' Achievement": { question: "How do leaders check that current core attainment is supported by assessment evidence?", evidence: "Current core assessment results and the cohort breakdown shown above.", ask: "Compare whole-school attainment across English, Mathematics, and Science." },
+  "Students' Progress": { question: "How are leaders monitoring change between the two assessment terms?", evidence: "Paired Term 1 and Term 2 assessment results for the measured pupils." },
+  "Learning Skills": { question: "What other evidence helps leaders understand learning skills beyond this internal proxy?", evidence: "Missing-assignment and behaviour records, alongside existing lesson review evidence." },
+  "Inclusion / SEND": { question: "How do leaders know whether support is helping the measured SEND cohort make progress?", evidence: "Paired assessment results and existing support-plan review evidence for this cohort.", ask: "Compare SEND and non-SEND observed progress." },
+  "Personal Development": { question: "How do leaders review attendance alongside the wider personal development evidence?", evidence: "Current attendance records and existing pastoral review evidence.", ask: "How does persistent absence relate to current attainment?" },
+};
 export default function InspectionsPage() {
-  const { students, setPrefilledReportTemplate } = useSessionData();
+  const { students, setPrefilledQuery, setPrefilledReportTemplate } = useSessionData();
   const router = useRouter();
   const [uplift, setUplift] = useState(0);
   const [passGrade, setPassGrade] = useState(5);
@@ -44,6 +51,7 @@ export default function InspectionsPage() {
     return { indicator: entry?.rubric.indicators.find((item: RubricIndicator) => item.name === row), count: entry?.count || 0 };
   };
   const active = getIndicator(selected.row, selected.phase);
+  const preparation = PREPARATION[selected.row];
   const simulated = active.indicator?.denominator ? Math.round(Math.min(100, (active.indicator.numerator + uplift) / active.indicator.denominator * 100) * 10) / 10 : null;
   const exportSef = () => {
     setPrefilledReportTemplate("Full DSIB/ADEK Evidence Pack");
@@ -94,7 +102,11 @@ export default function InspectionsPage() {
           ["Official judgement", "Not determined"],
         ].map(([label, value]) => <div key={String(label)} className="rounded-xl border border-[#E3DED4] bg-white p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#5C5852]">{label}</p><p className="mt-1 text-lg font-extrabold">{value}</p></div>)}</div>
         {selected.row === "Students' Achievement" && active.indicator.denominator > 0 && <div className="rounded-xl border border-[#E3DED4] bg-white p-4"><p className="text-[12px] font-bold">What-if: pupils reaching the measured reference (+1 grade step)</p><div className="mt-2 flex items-center gap-3"><button type="button" onClick={() => setUplift(Math.max(0, uplift - 1))} className="rounded-lg border px-3 py-1" aria-label="Decrease simulated pupils">−</button><span>{uplift}</span><button type="button" onClick={() => setUplift(Math.min(10, active.indicator!.denominator - active.indicator!.numerator, uplift + 1))} className="rounded-lg border px-3 py-1" aria-label="Increase simulated pupils">+</button><span className="text-xs text-[#5C5852]">up to 10; no pupil data is changed</span></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><p>Actual: {active.indicator.calculatedValue}% · official grade not determined</p><p>Scenario: {simulated}% · official grade not determined</p></div></div>}
-        <p className="text-[12px] text-[#5C5852]">{active.indicator.description}</p>
+        <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-orange-800">Why this theme appears</p><p className="mt-1 text-[12px] text-[#5C5852]">{active.indicator.description}</p></div>
+        {active.indicator.denominator > 0 && preparation && <div className="grid gap-3 border-t border-orange-200 pt-4 sm:grid-cols-2">
+          <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-orange-800">Possible inspection question</p><p className="mt-1 text-sm leading-relaxed">{preparation.question}</p><p className="mt-1 text-[11px] text-[#5C5852]">A leadership preparation prompt based on this theme, not a predicted inspector question.</p></div>
+          <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-orange-800">Useful evidence to have available</p><p className="mt-1 text-sm leading-relaxed">{preparation.evidence}</p>{preparation.ask && <button type="button" onClick={() => { setPrefilledQuery(preparation.ask!); router.push("/app/ask"); }} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-orange-700 hover:underline">Ask Inside about this <ArrowRight className="h-3.5 w-3.5" /></button>}</div>
+        </div>}
       </div> : <p className="mt-4 text-[13px] text-[#5C5852]">No pupil records are loaded for this phase; Inside does not infer a grade.</p>}
       <div className="mt-5 flex items-center gap-2 border-t border-orange-200 pt-4 text-[12px] font-bold text-emerald-800"><ShieldCheck className="h-4 w-4" />Deterministic local evidence only. <a className="underline" href="https://www.moe.gov.ae/documents/en/frameworkbooken.pdf" target="_blank" rel="noreferrer">Read the official UAE School Inspection Framework</a>.</div>
     </section>
