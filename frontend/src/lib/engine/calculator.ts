@@ -427,9 +427,9 @@ export function runScienceGenderGapPreset(
       data: chartData,
     },
     highlightedStudents,
-    filterDescription: "Planted Scenario: Year 10 Boys (250 pupils) vs Girls (250 pupils) in Science",
+    filterDescription: `Year 10 Science Cohort Comparison (${boys.length} boys, ${girls.length} girls)`,
     sourceDataset: datasetName,
-    explanation: `Inside identified a notable ${gap} grade attainment gap in Year 10 Science, where girls average Grade ${girlsT2Sci} compared to Grade ${boysT2Sci} for boys across 500 records. Both cohorts demonstrate slight term-on-term progress (+${termGain} grades).`,
+    explanation: `Inside identified a notable ${gap} grade attainment gap in Year 10 Science, where girls average Grade ${girlsT2Sci} compared to Grade ${boysT2Sci} for boys across ${students.length} records. Both cohorts demonstrate slight term-on-term progress (+${termGain} grades).`,
     suggestedActions: [
       "Deploy targeted practical science investigation workshops for Year 10 boys",
       "Cross-examine CAT4 Spatial and Quantitative scores to identify untapped potential",
@@ -958,7 +958,7 @@ export function calculateReportMetrics(
         title: "Academic Progress & Attainment Review",
         templateType,
         studentCount: total,
-        executiveSummary: `Cohort progress indicates stable baseline attainment with overall subject averages of Grade ${avgMath} in Math, Grade ${avgEng} in English, and Grade ${avgSci} in Science across 500 Year 10 pupils. Students with attendance >=90% demonstrate consistent grade progression.`,
+        executiveSummary: `Cohort progress indicates stable baseline attainment with overall subject averages of Grade ${avgMath} in Math, Grade ${avgEng} in English, and Grade ${avgSci} in Science across ${total} pupils. Students with attendance >=90% demonstrate consistent grade progression.`,
         keyMetrics: [
           { label: "Avg Mathematics", value: `Grade ${avgMath}`, status: avgMath >= 5.0 ? "Strong" : "Developing" },
           { label: "Avg English", value: `Grade ${avgEng}`, status: avgEng >= 5.0 ? "Strong" : "Developing" },
@@ -985,7 +985,7 @@ export function calculateReportMetrics(
         title: "Parent & Guardian Consultation Briefing",
         templateType,
         studentCount: total,
-        executiveSummary: `This briefing provides verified attendance records, core attainment benchmarks, and suggested pastoral talking points for upcoming parent consultation meetings across the active 500-student cohort.`,
+        executiveSummary: `This briefing provides verified attendance records, core attainment benchmarks, and suggested pastoral talking points for upcoming parent consultation meetings across the active ${total}-student cohort.`,
         keyMetrics: [
           { label: "Pupils in Scope", value: `${total} Students`, status: "Active Records" },
           { label: "Average Attendance", value: `${avgAttendance}%`, status: "Cohort Benchmark" },

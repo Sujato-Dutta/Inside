@@ -33,10 +33,10 @@ export interface StudentRecord {
   absentSessionsAuthorised?: number;
   absentSessionsUnauthorised?: number;
   lateCount?: number;
-  mathGrade?: number | null; // 1-9 or score
-  englishGrade?: number | null;
-  scienceGrade?: number | null;
-  overallScore?: number | null;
+  mathGrade: number; // 1-9 or score
+  englishGrade: number;
+  scienceGrade: number;
+  overallScore: number;
   senStatus: boolean; // Special Educational Needs
   inclusionSend?: string; // Cognition and Learning, Communication and Interaction, SEMH, Sensory and Physical, or None
   sendSupportLevel?: string | null;
@@ -50,7 +50,7 @@ export interface StudentRecord {
   cat4NonVerbal?: number;
   cat4Quantitative?: number;
   cat4Spatial?: number;
-  cat4Mean?: number | null;
+  cat4Mean?: number;
   cat4_sas?: number | null;
   /** Presence flags preserve valid zero marks without treating missing marks as zero. */
   assessmentPresent?: { math: boolean; english: boolean; science: boolean };
@@ -59,29 +59,29 @@ export interface StudentRecord {
   predictedMathGrade?: number;
   predictedScienceGrade?: number;
   predictedEnglishGrade?: number;
-  term1MathGrade?: number | null;
-  term1ScienceGrade?: number | null;
-  term1EnglishGrade?: number | null;
-  term2MathGrade?: number | null;
-  term2ScienceGrade?: number | null;
-  term2EnglishGrade?: number | null;
-  avgCoreT1?: number | null;
-  avgCoreT2?: number | null;
-  targetAvgCore?: number | null;
-  progressT1T2?: number | null;
+  term1MathGrade?: number;
+  term1ScienceGrade?: number;
+  term1EnglishGrade?: number;
+  term2MathGrade?: number;
+  term2ScienceGrade?: number;
+  term2EnglishGrade?: number;
+  avgCoreT1?: number;
+  avgCoreT2?: number;
+  targetAvgCore?: number;
+  progressT1T2?: number;
   aboveTargetT2?: boolean;
   arabicTrack?: "Arabic A" | "Arabic B" | string;
-  arabicGrade?: number | null;
-  arabic_T1?: number | null;
-  arabic_T2?: number | null;
+  arabicGrade?: number;
+  arabic_T1?: number;
+  arabic_T2?: number;
   islamicEducationTaken?: boolean;
-  islamicGrade?: number | null;
-  islamicEd_T1?: number | null;
-  islamicEd_T2?: number | null;
-  socialStudies_T1?: number | null;
-  socialStudies_T2?: number | null;
-  moralEd_T1?: number | null;
-  moralEd_T2?: number | null;
+  islamicGrade?: number;
+  islamicEd_T1?: number;
+  islamicEd_T2?: number;
+  socialStudies_T1?: number;
+  socialStudies_T2?: number;
+  moralEd_T1?: number;
+  moralEd_T2?: number;
   gradeDrop?: number;
   missingAssignments?: number;
   behaviourIncidents?: number;

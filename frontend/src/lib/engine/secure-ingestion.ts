@@ -125,7 +125,7 @@ function isPupilTable(rows: string[][]): boolean {
 async function readTables(file: File): Promise<SourceTable[]> {
   if (/\.xlsx$/i.test(file.name)) {
     const buffer = (await readFileLocally(file, "buffer")) as ArrayBuffer;
-    const rawSheets = (await readXlsxFile(buffer, { allSheets: true })) as { sheet?: string; data: unknown[][] }[];
+    const rawSheets = (await (readXlsxFile as any)(buffer, { allSheets: true })) as { sheet?: string; data: unknown[][] }[];
 
     // 1. Block Documentation Sheets: Never parse README, Answer_Key, Demo_Script, or Data_Dictionary
     const BLOCKED_SHEETS = new Set([
@@ -377,13 +377,13 @@ export async function stageSchoolFiles(selectedFiles: File[]): Promise<StagedDat
     const hasEng = draft.term2EnglishGrade !== undefined || draft.englishGrade !== undefined;
     const hasSci = draft.term2ScienceGrade !== undefined || draft.scienceGrade !== undefined;
 
-    const math = hasMath ? (draft.term2MathGrade ?? draft.mathGrade ?? null) : null;
-    const english = hasEng ? (draft.term2EnglishGrade ?? draft.englishGrade ?? null) : null;
-    const science = hasSci ? (draft.term2ScienceGrade ?? draft.scienceGrade ?? null) : null;
+    const math = hasMath ? (draft.term2MathGrade ?? draft.mathGrade ?? 0) : 0;
+    const english = hasEng ? (draft.term2EnglishGrade ?? draft.englishGrade ?? 0) : 0;
+    const science = hasSci ? (draft.term2ScienceGrade ?? draft.scienceGrade ?? 0) : 0;
 
     const attendance = Number.isFinite(draft.attendanceRate) ? draft.attendanceRate! : 0;
-    const hasGrades = math !== null && english !== null && science !== null;
-    const overallScore = hasGrades ? Math.round(((math + english + science) / 3) * 10) / 10 : null;
+    const hasGrades = currentMarks.size > 0;
+    const overallScore = Math.round(((math + english + science) / 3) * 10) / 10;
     const minGrade = hasGrades ? Math.min(math, english, science) : null;
 
     const riskLevel = attendance < 85 || (minGrade !== null && minGrade < 4)
@@ -423,11 +423,11 @@ export async function stageSchoolFiles(selectedFiles: File[]): Promise<StagedDat
       ealStatus: Boolean(draft.ealStatus),
       newJoiner: Boolean((draft as Record<string, unknown>).newJoiner),
       arabicTrack: (draft as Record<string, unknown>).arabicTrack as string,
-      arabicGrade: ((draft as Record<string, unknown>).arabicGrade as number) ?? null,
+      arabicGrade: ((draft as Record<string, unknown>).arabicGrade as number) ?? undefined,
       islamicEducationTaken: Boolean((draft as Record<string, unknown>).islamicEducationTaken),
-      islamicGrade: ((draft as Record<string, unknown>).islamicGrade as number) ?? null,
-      progressT1T2: ((draft as Record<string, unknown>).progressT1T2 as number) ?? null,
-      targetAvgCore: ((draft as Record<string, unknown>).targetAvgCore as number) ?? null,
+      islamicGrade: ((draft as Record<string, unknown>).islamicGrade as number) ?? undefined,
+      progressT1T2: ((draft as Record<string, unknown>).progressT1T2 as number) ?? undefined,
+      targetAvgCore: ((draft as Record<string, unknown>).targetAvgCore as number) ?? undefined,
       aboveTargetT2: Boolean((draft as Record<string, unknown>).aboveTargetT2),
       riskLevel,
     } satisfies StudentRecord;

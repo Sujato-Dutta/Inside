@@ -434,10 +434,10 @@ export function buildSchoolStatsDigest(rows: StudentRecord[]): SchoolStatsDigest
     },
     interventionsAndClasses: {
       mathsBoosterEnrolled: booster.length,
-      mathsBoosterGrade5Count,
+      mathsBoosterGrade5Count: boosterGrade5Count,
       mathsBoosterGrade5Pct: boosterPct,
       mathsComparisonGroupCount: comparison.length,
-      mathsComparisonGrade5Count,
+      mathsComparisonGrade5Count: comparisonGrade5Count,
       mathsComparisonGrade5Pct: comparisonPct,
       year9TutorGroupsMovement: y9Groups,
       borderlineY10Y11Count: borderline.length,

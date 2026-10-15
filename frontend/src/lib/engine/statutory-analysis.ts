@@ -2,15 +2,18 @@ import type { StudentRecord, UploadedFileMeta } from "@/types/student-data";
 import type { DeterministicResult } from "./types";
 import type { AskPlan } from "./ask-plan";
 
+const num = (v: unknown): number => (typeof v === "number" && !isNaN(v) ? v : 0);
 const avg = (v: number[]) => v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
 const pct = (a: number, b: number) => b ? Math.round((a / b) * 1000) / 10 : 0;
 const round = (v: number) => Math.round(v * 10) / 10;
-const subjectScore = (s: StudentRecord, subject: "math" | "science" | "english") =>
-  subject === "math" ? s.term2MathGrade ?? s.mathGrade :
-  subject === "science" ? s.term2ScienceGrade ?? s.scienceGrade :
-  s.term2EnglishGrade ?? s.englishGrade;
-const termOne = (s: StudentRecord) => avg([s.term1MathGrade ?? s.mathGrade, s.term1ScienceGrade ?? s.scienceGrade, s.term1EnglishGrade ?? s.englishGrade]);
-const termTwo = (s: StudentRecord) => avg([s.term2MathGrade ?? s.mathGrade, s.term2ScienceGrade ?? s.scienceGrade, s.term2EnglishGrade ?? s.englishGrade]);
+const subjectScore = (s: StudentRecord, subject: "math" | "science" | "english"): number => {
+  const val = subject === "math" ? s.term2MathGrade ?? s.mathGrade :
+    subject === "science" ? s.term2ScienceGrade ?? s.scienceGrade :
+    s.term2EnglishGrade ?? s.englishGrade;
+  return num(val);
+};
+const termOne = (s: StudentRecord): number => avg([num(s.term1MathGrade ?? s.mathGrade), num(s.term1ScienceGrade ?? s.scienceGrade), num(s.term1EnglishGrade ?? s.englishGrade)]);
+const termTwo = (s: StudentRecord): number => avg([num(s.term2MathGrade ?? s.mathGrade), num(s.term2ScienceGrade ?? s.scienceGrade), num(s.term2EnglishGrade ?? s.englishGrade)]);
 const hasCoreResult = (s: StudentRecord) => termTwo(s) > 0;
 const table = (rows: StudentRecord[], limit = 15) => ({
   headers: ["Anonymous Ref", "Year", "Section", "Gender", "Attendance", "Math", "Science", "English", "SEND", "Emirati"],
@@ -123,7 +126,7 @@ export function analyzeRecordList(students: StudentRecord[], plan: AskPlan, file
   const subject = plan.subject === "Mathematics" ? "math" : plan.subject === "Science" ? "science" : plan.subject === "English" ? "english" : null;
   const sort = plan.recordSort === "attendance" ? "attendance" : subject ? "subject_grade" : "core_grade";
   const order = plan.recordOrder || "none";
-  const score = (student: StudentRecord) => sort === "attendance" ? student.attendanceRate : subject && sort === "subject_grade" ? subjectScore(student, subject) : avg([subjectScore(student, "math"), subjectScore(student, "science"), subjectScore(student, "english")]);
+  const score = (student: StudentRecord): number => sort === "attendance" ? num(student.attendanceRate) : subject && sort === "subject_grade" ? subjectScore(student, subject) : avg([subjectScore(student, "math"), subjectScore(student, "science"), subjectScore(student, "english")]);
   const ranked = order === "none" ? cohort : [...cohort].sort((a, b) => {
     const difference = score(a) - score(b);
     return (order === "highest" ? -difference : difference) || a.id.localeCompare(b.id);
@@ -252,7 +255,7 @@ export function analyzeAdvice(students: StudentRecord[], plan: AskPlan, files: U
     const peerAchieved = comparePeers ? peers.filter((student) => subjectScore(student, subject) >= 5).length : 0;
     return { label, achieved, rate: pct(achieved, cohort.length), peerAchieved, peerRate: comparePeers ? pct(peerAchieved, peers.length) : 0 };
   });
-  const lowest = [...subjectEvidence].sort((a, b) => a.rate - b.rate)[0];
+  const lowest = [...subjectEvidence].sort((a, b) => a.rate - b.rate)[0] || { label: "English", rate: 0, achieved: 0, peerAchieved: 0, peerRate: 0 };
   const absenceCount = cohort.filter((student) => student.attendanceRate < 90).length;
   const absenceRate = pct(absenceCount, cohort.length);
   const findings = [`${cohort.length} records match ${cohortName}. ${lowest.label} has the lowest observed at-or-above-expected rate in this view: ${lowest.rate}%.`];
@@ -427,8 +430,9 @@ export function analyzeStatutoryQuery(students: StudentRecord[], query: string, 
   const requested = subjects.filter(([label, subject]) => lower.includes(subject) || lower.includes(label.toLowerCase()));
   const selected = requested.length === 1 && !/whole.school|core subjects|across/.test(lower) ? requested : subjects;
   const data = selected.map(([label, subject]) => { const assessed = students.filter((s) => subjectScore(s, subject) > 0); return { label, Attainment: pct(assessed.filter((s) => subjectScore(s, subject) >= 5).length, assessed.length), "Below Expected": pct(assessed.filter((s) => subjectScore(s, subject) < 5).length, assessed.length) }; });
+  const strongest = [...data].sort((a, b) => b.Attainment - a.Attainment)[0];
   return makeResult(students, dataset, "Core attainment against the school's 75% screening reference", data,
-    [`${data.filter((s) => s.Attainment >= 75).length} of ${data.length} assessed subject${data.length === 1 ? "" : "s"} meet the school's internal 75% reference; this is not an official inspection grade.`, `The strongest assessed subject is ${[...data].sort((a, b) => b.Attainment - a.Attainment)[0].label}.`, "All percentages are reproducible from the anonymized evidence ledger."], students,
+    [`${data.filter((s) => s.Attainment >= 75).length} of ${data.length} assessed subject${data.length === 1 ? "" : "s"} meet the school's internal 75% reference; this is not an official inspection grade.`, `The strongest assessed subject is ${strongest?.label || "English"}.`, "All percentages are reproducible from the anonymized evidence ledger."], students,
     "The question requests current core subject attainment against the 75% reference.", "All committed pupils, assessed separately in English, Mathematics, and Science",
     selected.flatMap(([label, subject]) => { const assessed = students.filter((s) => subjectScore(s, subject) > 0); const attained = assessed.filter((s) => subjectScore(s, subject) >= 5).length; return [share(`${label} at or above expected`, attained, assessed.length), share(`${label} below expected`, assessed.length - attained, assessed.length)]; }), "label", ["Attainment", "Below Expected"]);
 }

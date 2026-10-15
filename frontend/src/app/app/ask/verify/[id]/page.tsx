@@ -14,8 +14,8 @@ function VerificationContent() {
   if (!exchange) return <div className="mx-auto max-w-2xl py-20 text-center"><ShieldCheck className="mx-auto h-10 w-10 text-orange-600" /><h1 className="mt-4 text-2xl font-extrabold">This verification is no longer in memory</h1><p className="mt-2 text-sm text-[#5C5852]">Answers exist only in the current browser session. A new conversation or data load clears them.</p><Link href="/app/ask" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white"><ArrowLeft className="h-4 w-4" />Back to Ask Inside</Link></div>;
 
   const { result } = exchange;
-  const proof = result.verification;
-  if (!proof) return <div className="mx-auto max-w-2xl py-20 text-center"><h1 className="text-2xl font-extrabold">Verification is unavailable for this answer</h1><Link href="/app/ask" className="mt-5 inline-block text-sm font-bold text-orange-700">Back to Ask Inside</Link></div>;
+  const proof = result?.verification;
+  if (!result || !proof) return <div className="mx-auto max-w-2xl py-20 text-center"><h1 className="text-2xl font-extrabold">Verification is unavailable for this answer</h1><Link href="/app/ask" className="mt-5 inline-block text-sm font-bold text-orange-700">Back to Ask Inside</Link></div>;
   return <div className="mx-auto max-w-5xl space-y-6 pb-16">
     <Link href="/app/ask" className="inline-flex items-center gap-2 text-sm font-bold text-orange-700 hover:underline"><ArrowLeft className="h-4 w-4" />Back to conversation</Link>
     <header className="rounded-3xl border border-orange-200 bg-gradient-to-br from-orange-50 via-white to-white p-6 sm:p-8">

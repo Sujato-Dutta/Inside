@@ -469,7 +469,7 @@ export function resolveDeterministicQuery(
     q.includes("emirati gap")
   ) {
     const emiratiBorderline = rows
-      .filter((s) => s.emiratiStatus === true && s.avgCoreT2 !== null && s.avgCoreT2 >= 4.0 && s.avgCoreT2 <= 5.5)
+      .filter((s) => s.emiratiStatus === true && typeof s.avgCoreT2 === "number" && s.avgCoreT2 >= 4.0 && s.avgCoreT2 <= 5.5)
       .slice(0, 10)
       .map((s) => [
         s.sourceRef || s.id,
