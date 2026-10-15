@@ -53,6 +53,7 @@ const subjects = new Set(["English", "Mathematics", "Science", "All", null]);
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const query = typeof body?.query === "string" ? body.query.trim().slice(0, 500) : "";
+  const statsDigest = body?.statsDigest ? JSON.stringify(body.statsDigest) : null;
   const previousQuestions = Array.isArray(body?.previousQuestions)
     ? body.previousQuestions.filter((item: unknown): item is string => typeof item === "string").slice(-4).map((item: string) => item.trim().slice(0, 500))
     : typeof body?.previousQuestion === "string" ? [body.previousQuestion.trim().slice(0, 500)] : [];
@@ -65,9 +66,22 @@ export async function POST(request: NextRequest) {
   if (containsPotentialSchoolFigures(query) || previousQuestions.some(containsPotentialSchoolFigures)) {
     return Response.json({ error: "Please ask without pasting school figures or rows. Inside will calculate the answer from your active files locally." }, { status: 400 });
   }
+
+  const effectiveSystemPrompt = `You are the INSIDE Inspection Intelligence Copilot for UAE British/Private School Senior Leadership Teams (DSIB/KHDA & ADEK frameworks).
+
+STRICT RULES:
+1. Answer ONLY using the exact pre-calculated metrics inside the provided <SCHOOL_STATS_DIGEST> JSON.
+2. NEVER invent, estimate, or recalculate any percentage, student count, or average. Quote the exact numbers and cohort denominators (N) from the digest.
+3. Remember that Foundation Stage (FS1-FS2, 140 pupils) and Post-16 (Year 12-13, 115 pupils) are measured separately; standard core attainment is measured across the 1,045 assessed pupils in Year 1 to Year 11.
+4. Use calm, objective, audit-defensible UK/UAE school leadership terminology ("screening threshold", "observed gap", "line of enquiry"). Avoid alarmist language or causal claims.
+5. If the user asks for a metric not present in <SCHOOL_STATS_DIGEST>, state clearly which related verified metrics ARE available in the digest rather than guessing.
+
+${statsDigest ? `<SCHOOL_STATS_DIGEST>\n${statsDigest}\n</SCHOOL_STATS_DIGEST>\n` : ""}
+${system}`;
+
   try {
     const raw = await groqCompletion([
-      { role: "system", content: system },
+      { role: "system", content: effectiveSystemPrompt },
       { role: "user", content: JSON.stringify({ question: query, previousQuestions }) },
     ], { jsonSchema: schema, maxTokens: 650 });
     const parsed = JSON.parse(raw) as AskPlan;

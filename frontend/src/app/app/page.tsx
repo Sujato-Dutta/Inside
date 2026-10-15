@@ -14,17 +14,30 @@ import { Bar, BarChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContaine
 const pct = (part: number, total: number) => total ? Math.round((part / total) * 1000) / 10 : 0;
 const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 const round = (value: number) => Math.round(value * 10) / 10;
-const score = (student: StudentRecord) => average([
-  student.term2MathGrade ?? student.mathGrade,
-  student.term2ScienceGrade ?? student.scienceGrade,
-  student.term2EnglishGrade ?? student.englishGrade,
-]);
-const expected = (student: StudentRecord) => score(student) >= 5;
-const hasCoreResult = (student: StudentRecord) => score(student) > 0;
+const isNumeric = (v: unknown): v is number => v !== null && v !== undefined && v !== "" && !isNaN(Number(v));
+const hasCoreResult = (student: StudentRecord) => {
+  if (isNumeric(student.avgCoreT2)) return true;
+  const m = student.term2MathGrade ?? student.mathGrade;
+  const s = student.term2ScienceGrade ?? student.scienceGrade;
+  const e = student.term2EnglishGrade ?? student.englishGrade;
+  return isNumeric(m) && isNumeric(s) && isNumeric(e);
+};
+const score = (student: StudentRecord): number => {
+  if (isNumeric(student.avgCoreT2)) return Number(student.avgCoreT2);
+  const m = student.term2MathGrade ?? student.mathGrade;
+  const s = student.term2ScienceGrade ?? student.scienceGrade;
+  const e = student.term2EnglishGrade ?? student.englishGrade;
+  if (isNumeric(m) && isNumeric(s) && isNumeric(e)) {
+    return (Number(m) + Number(s) + Number(e)) / 3;
+  }
+  return 0;
+};
+const expected = (student: StudentRecord) => hasCoreResult(student) && score(student) >= 5;
 const sendStatus = (student: StudentRecord) => student.senStatus || Boolean(student.inclusionSend && student.inclusionSend !== "None");
 const progress = (student: StudentRecord) => {
-  if ([student.term1MathGrade, student.term1ScienceGrade, student.term1EnglishGrade, student.term2MathGrade, student.term2ScienceGrade, student.term2EnglishGrade].some((value) => value === undefined || value === null)) return null;
-  return score(student) - average([student.term1MathGrade!, student.term1ScienceGrade!, student.term1EnglishGrade!]);
+  if (isNumeric(student.progressT1T2)) return Number(student.progressT1T2);
+  if ([student.term1MathGrade, student.term1ScienceGrade, student.term1EnglishGrade, student.term2MathGrade, student.term2ScienceGrade, student.term2EnglishGrade].some((value) => !isNumeric(value))) return null;
+  return score(student) - average([Number(student.term1MathGrade), Number(student.term1ScienceGrade), Number(student.term1EnglishGrade)]);
 };
 const observedProgress = (students: StudentRecord[]) => students.map(progress).filter((value): value is number => value !== null);
 
@@ -158,7 +171,7 @@ export default function AppHomePage() {
   ] : [];
 
   const kpis = [
-    { label: "Whole-School Attainment", value: assessed.length ? `${attainment}%` : "No core results", detail: `${assessed.length} assessed pupils · school Grade 5 reference, not an official grade`, icon: Target, query: "Compare whole-school attainment across English, Math, and Science.", tone: "orange" },
+    { label: "Whole-School Attainment", value: assessed.length ? `${attainment}%` : "No core results", detail: `${assessed.length.toLocaleString()} assessed pupils (Year 1–11) · ${total.toLocaleString()} on roll`, icon: Target, query: "Compare whole-school attainment across English, Math, and Science.", tone: "orange" },
     { label: "Inclusion Progress Delta", value: sendProgress.length ? `${sendDelta >= 0 ? "+" : ""}${sendDelta.toFixed(2)} grades` : "No two-term data", detail: `${sendProgress.length} Students of Determination with two term results`, icon: TrendingUp, query: "Show attainment and progress deltas for Students of Determination compared to non-SEND peers.", tone: "emerald" },
     { label: "Persistent Absence Rate", value: `${pct(persistent.length, total)}%`, detail: `${persistent.length} pupils below 90% attendance`, icon: AlertTriangle, query: "Identify Students of Determination flagged for Persistent Absence and calculate attainment impact.", tone: "red" },
   ];

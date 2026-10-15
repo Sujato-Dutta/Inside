@@ -125,8 +125,49 @@ function isPupilTable(rows: string[][]): boolean {
 async function readTables(file: File): Promise<SourceTable[]> {
   if (/\.xlsx$/i.test(file.name)) {
     const buffer = (await readFileLocally(file, "buffer")) as ArrayBuffer;
-    const sheets = await readXlsxFile(buffer);
-    const tables = sheets.map((sheet) => ({ source: `${file.name} / ${sheet.sheet}`, rows: stringRows(sheet.data) }))
+    const rawSheets = (await readXlsxFile(buffer, { allSheets: true })) as { sheet?: string; data: unknown[][] }[];
+
+    // 1. Block Documentation Sheets: Never parse README, Answer_Key, Demo_Script, or Data_Dictionary
+    const BLOCKED_SHEETS = new Set([
+      "readme",
+      "answerkey",
+      "answer_key",
+      "demoscript",
+      "demo_script",
+      "datadictionary",
+      "data_dictionary",
+    ]);
+    const filteredSheets = rawSheets.filter((s) => !BLOCKED_SHEETS.has(compact(s.sheet)));
+
+    // 2. Priority Short-Circuit for MASTER
+    const masterSheet = filteredSheets.find((s) => compact(s.sheet) === "master");
+    if (masterSheet && isPupilTable(stringRows(masterSheet.data))) {
+      const masterRows = stringRows(masterSheet.data);
+      const weeklySheet = filteredSheets.find(
+        (s) => compact(s.sheet) === "attendanceweekly" || compact(s.sheet) === "weeklyattendance"
+      );
+      if (weeklySheet && weeklySheet.data.length > 1) {
+        const weeklyRows = stringRows(weeklySheet.data);
+        const weeklyHeaders = weeklyRows[0].slice(3); // T2_W1_Absent_Sessions ... T2_W10_Absent_Sessions
+        const weeklyMap = new Map<string, string[]>();
+        for (let i = 1; i < weeklyRows.length; i++) {
+          const row = weeklyRows[i];
+          if (row[0]) weeklyMap.set(row[0].trim(), row.slice(3));
+        }
+        masterRows[0] = [...masterRows[0], ...weeklyHeaders];
+        const masterIdIdx = masterRows[0].findIndex((h) => ID_HEADERS.includes(compact(h)));
+        for (let i = 1; i < masterRows.length; i++) {
+          const ref = masterRows[i][masterIdIdx]?.trim();
+          const series = (ref && weeklyMap.get(ref)) || new Array(weeklyHeaders.length).fill("0");
+          masterRows[i] = [...masterRows[i], ...series];
+        }
+      }
+      return [{ source: `${file.name} / ${masterSheet.sheet || "MASTER"}`, rows: masterRows }];
+    }
+
+    // 3. Multi-File / Split-Sheet Join Fallback (MIS, Assessment, SEND_Register, Attendance)
+    const tables = filteredSheets
+      .map((sheet) => ({ source: `${file.name} / ${sheet.sheet}`, rows: stringRows(sheet.data) }))
       .filter((table) => isPupilTable(table.rows));
     if (!tables.length) throw new Error(`${file.name}: no pupil-data sheet with a Student_Ref or Student_ID header was found.`);
     return tables;
@@ -332,23 +373,36 @@ export async function stageSchoolFiles(selectedFiles: File[]): Promise<StagedDat
         (draft as Record<string, unknown>)[field] = rawValue;
       }
     }
-    const math = draft.term2MathGrade ?? draft.mathGrade ?? 0;
-    const english = draft.term2EnglishGrade ?? draft.englishGrade ?? 0;
-    const science = draft.term2ScienceGrade ?? draft.scienceGrade ?? 0;
+    const hasMath = draft.term2MathGrade !== undefined || draft.mathGrade !== undefined;
+    const hasEng = draft.term2EnglishGrade !== undefined || draft.englishGrade !== undefined;
+    const hasSci = draft.term2ScienceGrade !== undefined || draft.scienceGrade !== undefined;
+
+    const math = hasMath ? (draft.term2MathGrade ?? draft.mathGrade ?? null) : null;
+    const english = hasEng ? (draft.term2EnglishGrade ?? draft.englishGrade ?? null) : null;
+    const science = hasSci ? (draft.term2ScienceGrade ?? draft.scienceGrade ?? null) : null;
+
     const attendance = Number.isFinite(draft.attendanceRate) ? draft.attendanceRate! : 0;
-    const hasGrades = [math, english, science].some((grade) => grade > 0);
-    const riskLevel = attendance < 85 || (hasGrades && Math.min(math, english, science) < 4)
+    const hasGrades = math !== null && english !== null && science !== null;
+    const overallScore = hasGrades ? Math.round(((math + english + science) / 3) * 10) / 10 : null;
+    const minGrade = hasGrades ? Math.min(math, english, science) : null;
+
+    const riskLevel = attendance < 85 || (minGrade !== null && minGrade < 4)
       ? "High"
-      : attendance < 90 || (hasGrades && Math.min(math, english, science) < 5)
+      : attendance < 90 || (minGrade !== null && minGrade < 5)
         ? "Moderate"
         : "Low";
     return {
       id: await anonymousRef(sourceRef, salt),
       sourceRef,
-      name: "Redacted in analysis",
+      name: draft.name || "Redacted in analysis",
       gender: draft.gender || "Other",
       yearGroup: draft.yearGroup ?? 0,
+      yearGroupStr: ((draft as Record<string, unknown>).yearGroupStr as string) || (draft.yearGroup === 0 ? "FS" : `Year ${draft.yearGroup}`),
+      phase: (draft as Record<string, unknown>).phase as string,
+      keyStage: (draft as Record<string, unknown>).keyStage as string,
       classGroup: draft.classGroup || "Unmapped",
+      tutorGroup: ((draft as Record<string, unknown>).tutorGroup as string) || draft.classGroup || "Unmapped",
+      nationality: (draft as Record<string, unknown>).nationality as string,
       attendanceRate: attendance,
       mathGrade: math,
       englishGrade: english,
@@ -362,11 +416,19 @@ export async function stageSchoolFiles(selectedFiles: File[]): Promise<StagedDat
       cat4_sas: draft.cat4_sas ?? null,
       assessmentPresent: { math: currentMarks.has("math"), english: currentMarks.has("english"), science: currentMarks.has("science") },
       attendancePresent: draft.attendanceRate !== undefined,
-      overallScore: Math.round(((math + english + science) / 3) * 10) / 10,
+      overallScore,
       senStatus: Boolean(draft.senStatus || (draft.inclusionSend && draft.inclusionSend !== "None")),
       inclusionSend: draft.inclusionSend || "None",
       emiratiStatus: Boolean(draft.emiratiStatus),
       ealStatus: Boolean(draft.ealStatus),
+      newJoiner: Boolean((draft as Record<string, unknown>).newJoiner),
+      arabicTrack: (draft as Record<string, unknown>).arabicTrack as string,
+      arabicGrade: ((draft as Record<string, unknown>).arabicGrade as number) ?? null,
+      islamicEducationTaken: Boolean((draft as Record<string, unknown>).islamicEducationTaken),
+      islamicGrade: ((draft as Record<string, unknown>).islamicGrade as number) ?? null,
+      progressT1T2: ((draft as Record<string, unknown>).progressT1T2 as number) ?? null,
+      targetAvgCore: ((draft as Record<string, unknown>).targetAvgCore as number) ?? null,
+      aboveTargetT2: Boolean((draft as Record<string, unknown>).aboveTargetT2),
       riskLevel,
     } satisfies StudentRecord;
   }));

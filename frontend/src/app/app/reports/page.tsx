@@ -11,10 +11,28 @@ const TEMPLATES = ["Full DSIB/ADEK Evidence Pack", "Governors' Strategic Brief",
 type Template = (typeof TEMPLATES)[number];
 const pct = (part: number, total: number) => total ? Math.round((part / total) * 1000) / 10 : 0;
 const avg = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
-const grade = (student: StudentRecord) => avg([student.term2MathGrade ?? student.mathGrade, student.term2ScienceGrade ?? student.scienceGrade, student.term2EnglishGrade ?? student.englishGrade]);
+const isNumeric = (v: unknown): v is number => v !== null && v !== undefined && v !== "" && !isNaN(Number(v));
+const hasCoreResult = (student: StudentRecord) => {
+  if (isNumeric(student.avgCoreT2)) return true;
+  const m = student.term2MathGrade ?? student.mathGrade;
+  const s = student.term2ScienceGrade ?? student.scienceGrade;
+  const e = student.term2EnglishGrade ?? student.englishGrade;
+  return isNumeric(m) && isNumeric(s) && isNumeric(e);
+};
+const grade = (student: StudentRecord): number => {
+  if (isNumeric(student.avgCoreT2)) return Number(student.avgCoreT2);
+  const m = student.term2MathGrade ?? student.mathGrade;
+  const s = student.term2ScienceGrade ?? student.scienceGrade;
+  const e = student.term2EnglishGrade ?? student.englishGrade;
+  if (isNumeric(m) && isNumeric(s) && isNumeric(e)) {
+    return (Number(m) + Number(s) + Number(e)) / 3;
+  }
+  return 0;
+};
 const progress = (student: StudentRecord) => {
-  if ([student.term1MathGrade, student.term1ScienceGrade, student.term1EnglishGrade, student.term2MathGrade, student.term2ScienceGrade, student.term2EnglishGrade].some((value) => value === undefined || value === null)) return null;
-  return grade(student) - avg([student.term1MathGrade!, student.term1ScienceGrade!, student.term1EnglishGrade!]);
+  if (isNumeric(student.progressT1T2)) return Number(student.progressT1T2);
+  if ([student.term1MathGrade, student.term1ScienceGrade, student.term1EnglishGrade, student.term2MathGrade, student.term2ScienceGrade, student.term2EnglishGrade].some((value) => !isNumeric(value))) return null;
+  return grade(student) - avg([Number(student.term1MathGrade), Number(student.term1ScienceGrade), Number(student.term1EnglishGrade)]);
 };
 const observedProgress = (students: StudentRecord[]) => students.map(progress).filter((value): value is number => value !== null);
 const signed = (value: number, decimals = 1) => `${value > 0 ? "+" : ""}${value.toFixed(decimals)}`;
@@ -45,7 +63,7 @@ type BriefPage = {
 
 function buildMetrics(students: StudentRecord[]): Metrics {
   const total = students.length;
-  const assessed = students.filter((student) => grade(student) > 0);
+  const assessed = students.filter(hasCoreResult);
   const attained = assessed.filter((student) => grade(student) >= 5).length;
   const absent = students.filter((student) => student.attendanceRate < 90);
   const attending = students.filter((student) => student.attendanceRate >= 90);
@@ -55,19 +73,23 @@ function buildMetrics(students: StudentRecord[]): Metrics {
   const sendPresent = send.filter((student) => student.attendanceRate >= 90);
   const sendProgress = observedProgress(send);
   const peerProgress = observedProgress(peers);
-  const absentAttained = absent.filter((student) => grade(student) >= 5).length;
-  const attendingAttained = attending.filter((student) => grade(student) >= 5).length;
-  const sendAbsentAttained = sendAbsent.filter((student) => grade(student) >= 5).length;
-  const sendPresentAttained = sendPresent.filter((student) => grade(student) >= 5).length;
+  const absentAttained = absent.filter((student) => hasCoreResult(student) && grade(student) >= 5).length;
+  const attendingAttained = attending.filter((student) => hasCoreResult(student) && grade(student) >= 5).length;
+  const sendAbsentAttained = sendAbsent.filter((student) => hasCoreResult(student) && grade(student) >= 5).length;
+  const sendPresentAttained = sendPresent.filter((student) => hasCoreResult(student) && grade(student) >= 5).length;
   const stageDefs = [["KS1", 1, 2], ["KS2", 3, 6], ["KS3", 7, 9], ["KS4", 10, 11], ["Post-16", 12, 14]] as const;
   const stages = stageDefs.map(([label, from, to]) => {
     const cohort = assessed.filter((student) => student.yearGroup >= from && student.yearGroup <= to);
     const reached = cohort.filter((student) => grade(student) >= 5).length;
     return { label, count: cohort.length, reached, rate: pct(reached, cohort.length) };
   });
-  const subjectDefs = [["English", (student: StudentRecord) => student.term2EnglishGrade ?? student.englishGrade], ["Mathematics", (student: StudentRecord) => student.term2MathGrade ?? student.mathGrade], ["Science", (student: StudentRecord) => student.term2ScienceGrade ?? student.scienceGrade]] as const;
+  const subjectDefs = [
+    ["English", (student: StudentRecord) => student.term2EnglishGrade ?? student.englishGrade],
+    ["Mathematics", (student: StudentRecord) => student.term2MathGrade ?? student.mathGrade],
+    ["Science", (student: StudentRecord) => student.term2ScienceGrade ?? student.scienceGrade]
+  ] as const;
   const subjects = subjectDefs.map(([label, current]) => {
-    const reached = assessed.filter((student) => current(student) >= 5).length;
+    const reached = assessed.filter((student) => isNumeric(current(student)) && Number(current(student)) >= 5).length;
     return { label, count: assessed.length, reached, rate: pct(reached, assessed.length) };
   });
   return {
@@ -117,13 +139,13 @@ function buildPages(template: Template, m: Metrics, sources: string[], readiness
     { label: "Sources", value: sources.length ? sources.join(", ") : "Current session cohort" },
     { label: "Records", value: `${m.total} joined pupils` },
     { label: "Data readiness", value: `${readiness}% from the Data Hub` },
-    { label: "Attainment method", value: `${m.attained} of ${m.assessedCount} pupils with core results reached Grade 5 or above` },
+    { label: "Attainment method", value: `${m.attained} of ${m.assessedCount} assessed pupils (Year 1–11) reached Grade 5 or above (${m.total} on roll)` },
     { label: "Attendance method", value: `${m.persistentCount} of ${m.total} pupils were below 90% attendance` },
     { label: "Dataset fingerprint", value: hash },
   ], note: "This fingerprint identifies the active dataset used to make this briefing." };
 
   if (template === TEMPLATES[0]) return [
-    { eyebrow: "Inspection evidence · 01", title: "Executive summary", headline: `${m.attainment}% of pupils are at or above the expected core grade.`, intro: `The current result ${attainmentReading} the school's internal 75% reference. This briefing brings together the strongest inspection signals from ${m.total} joined pupil records.`, visual: { kind: "metrics", title: "The school at a glance", cards: [{ label: "Attainment", value: `${m.attainment}%`, note: `${m.attained} of ${m.assessedCount} assessed pupils` }, { label: "Persistent absence", value: `${m.persistent}%`, note: `${m.persistentCount} pupils below 90%` }, { label: "SEND progress", value: sendProgress ? signed(m.sendDelta, 2) : "No data", note: `${m.sendProgressCount} pupils with two term results` }], note: "Every number is drawn from the current session, with no forecast added." }, insights: [{ label: "Attainment", text: `${m.attained} pupils reach the current Grade 5 equivalent.` }, { label: "Stage focus", text: phaseReading }], recommendation: weakest && weakest.rate < 75 ? `Review ${weakest.label} evidence first; it is the lowest measured stage.` : "Document the evidence supporting each stage before inspection." },
+    { eyebrow: "Inspection evidence · 01", title: "Executive summary", headline: `${m.attainment}% of pupils are at or above the expected core grade.`, intro: `The current result ${attainmentReading} the school's internal 75% reference. This briefing brings together the strongest inspection signals from ${m.total} joined pupil records.`, visual: { kind: "metrics", title: "The school at a glance", cards: [{ label: "Attainment", value: `${m.attainment}%`, note: `${m.attained} of ${m.assessedCount} assessed pupils (Year 1–11) · ${m.total} on roll` }, { label: "Persistent absence", value: `${m.persistent}%`, note: `${m.persistentCount} pupils below 90%` }, { label: "SEND progress", value: sendProgress ? signed(m.sendDelta, 2) : "No data", note: `${m.sendProgressCount} pupils with two term results` }], note: "Every number is drawn from the current session, with no forecast added." }, insights: [{ label: "Attainment", text: `${m.attained} pupils reach the current Grade 5 equivalent.` }, { label: "Stage focus", text: phaseReading }], recommendation: weakest && weakest.rate < 75 ? `Review ${weakest.label} evidence first; it is the lowest measured stage.` : "Document the evidence supporting each stage before inspection." },
     { eyebrow: "Inspection evidence · 02", title: "Attainment by Key Stage", headline: weakest ? `${weakest.label} needs the closest review.` : onlyStage ? `${onlyStage.label} is the only measured stage.` : "Stage coverage is limited.", intro: onlyStage ? "The chart shows the current stage result. Another populated stage is needed for a comparison." : "The chart shows where current attainment is strongest and where the inspection conversation may need more evidence.", visual: stageBars, insights: [{ label: onlyStage ? "Measured stage" : "Highest measured stage", text: strongest ? `${strongest.label}: ${strongest.rate}% across ${strongest.count} pupils.` : onlyStage ? `${onlyStage.label}: ${onlyStage.rate}% across ${onlyStage.count} pupils.` : "No stage is populated." }, { label: onlyStage ? "Comparison scope" : "Lowest measured stage", text: phaseReading }], recommendation: weakest && weakest.rate < 75 ? `Check the subject mix and assessment evidence in ${weakest.label} before the next review.` : "Keep current stage evidence ready for the inspection narrative." },
     { eyebrow: "Inspection evidence · 03", title: "Core subject picture", headline: `${m.subjects.filter((subject) => subject.rate >= 75).length} of 3 core subjects meet the 75% reference.`, intro: "English, Mathematics, and Science are shown side by side, using the same pupil population and grade threshold.", visual: subjectBars, insights: [{ label: "Strongest subject", text: `${[...m.subjects].sort((a, b) => b.rate - a.rate)[0].label} has the highest current rate.` }, { label: "Evidence base", text: `${m.assessedCount} assessed pupils are included in each subject calculation.` }], recommendation: "Use the lowest subject bar to guide the next moderation or curriculum review." },
     { eyebrow: "Inspection evidence · 04", title: "Inclusion and progress", headline: sendProgress ? `SEND pupils show ${signed(m.sendDelta, 2)} grades of observed progress.` : "SEND progress needs two term results.", intro: "Progress is the change in each pupil's average core grade from Term 1 to Term 2, then averaged by group.", visual: progressCards, insights: [{ label: "SEND cohort", text: `${m.sendProgressCount} SEND pupils have complete two-term results.` }, { label: "Comparison", text: progressComparison ? `The SEND progress difference from peers is ${signed(progressGap, 2)} grades.` : "A peer comparison needs two-term results in both groups." }], recommendation: progressComparison && progressGap < 0 ? "Review support plans for pupils whose current progress trails peers." : "Keep individual support evidence alongside this cohort summary." },

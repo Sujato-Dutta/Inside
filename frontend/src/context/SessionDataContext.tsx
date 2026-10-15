@@ -1,12 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { StudentRecord, UploadedFileMeta, AskAnswer, ColumnMapping } from "@/types/student-data";
 import { InsightAnomaly } from "@/lib/engine/types";
 import { DeterministicResult } from "@/lib/engine/types";
 import { SAMPLE_STUDENTS } from "@/data/mock-school-data";
 import { scanDatasetInsights } from "@/lib/engine/calculator";
 import { parseSpreadsheetInBrowser, ParseResult } from "@/lib/engine/data-parser";
+import { buildSchoolStatsDigest, SchoolStatsDigest } from "@/lib/deterministicDigest";
+import { InspectionBriefingCard } from "@/lib/deterministicRouter";
 
 export interface AskExchange {
   id: string;
@@ -16,7 +18,8 @@ export interface AskExchange {
   presentation?: string;
   reasoning?: string;
   advice?: string[];
-  result: DeterministicResult;
+  result?: DeterministicResult;
+  briefingCard?: InspectionBriefingCard;
 }
 
 interface SessionDataContextType {
@@ -26,6 +29,10 @@ interface SessionDataContextType {
   readinessScore: number;
   sessionMinutesRemaining: number;
   sessionDeleted: boolean;
+  maskStudentNames: boolean;
+  toggleMaskStudentNames: () => void;
+  getStudentDisplayName: (student: { name?: string; sourceRef?: string; id?: string }) => string;
+  statsDigest: SchoolStatsDigest;
   answersHistory: AskAnswer[];
   askExchanges: AskExchange[];
   prefilledQuery: string;
@@ -51,27 +58,48 @@ interface SessionDataContextType {
   importFileContent: (fileName: string, fileSize: number, contentString: string) => ParseResult;
 }
 
+const MASTER_COLUMNS = [
+  "Student_Ref", "Student_Name", "Gender", "Date_of_Birth", "Year_Group",
+  "Phase", "Key_Stage", "Tutor_Group", "Nationality", "Emirati", "EAL",
+  "New_Joiner", "Arabic_Track", "Islamic_Education_Taken", "SEND_Flag",
+  "SEND_Category", "SEND_Support_Level", "IEP_In_Place", "Gifted_Talented",
+  "CAT4_Mean_SAS", "English_T1", "English_T2", "Maths_T1", "Maths_T2",
+  "Science_T1", "Science_T2", "Arabic_T1", "Arabic_T2", "IslamicEd_T1",
+  "IslamicEd_T2", "SocialStudies_T1", "SocialStudies_T2", "MoralEd_T1",
+  "MoralEd_T2", "Avg_Core_T1", "Avg_Core_T2", "Target_Avg_Core",
+  "Progress_T1_T2", "Above_Target_T2", "Sessions_Possible",
+  "Absent_Sessions_Authorised", "Absent_Sessions_Unauthorised", "Late_Count",
+  "Att_T1_Pct", "Att_T2_Pct", "Att_Overall_Pct", "Persistent_Absence",
+  "Behaviour_Incidents", "Merit_Points", "Intervention_Programme",
+  "Post16_Route", "Post16_Avg_UCAS_Pts_T2", "EYFS_GLD"
+];
+
 const SessionDataContext = createContext<SessionDataContextType | undefined>(undefined);
 
 export function SessionDataProvider({ children }: { children: React.ReactNode }) {
   const initialInsights: InsightAnomaly[] = scanDatasetInsights(SAMPLE_STUDENTS);
 
   const [students, setStudents] = useState<StudentRecord[]>(SAMPLE_STUDENTS);
+  const [maskStudentNames, setMaskStudentNames] = useState<boolean>(false);
+  const toggleMaskStudentNames = () => setMaskStudentNames((prev) => !prev);
+
+  const getStudentDisplayName = (student: { name?: string; sourceRef?: string; id?: string }): string => {
+    if (maskStudentNames) {
+      return student.sourceRef || student.id || "Anonymous";
+    }
+    return student.name || student.sourceRef || student.id || "Anonymous";
+  };
+
+  const statsDigest = useMemo(() => buildSchoolStatsDigest(students), [students]);
+
   const [activeFiles, setActiveFiles] = useState<UploadedFileMeta[]>([
     {
-      id: "file-default-1",
-      name: "inside_synthetic_school_data_500.csv",
-      size: 48694,
+      id: "file-default-master",
+      name: "Inside_Demo_UAE_School_Master_Database.xlsx (MASTER)",
+      size: 535110,
       uploadedAt: "Just now",
       rowCount: SAMPLE_STUDENTS.length,
-      columns: [
-        "StudentID", "StudentName", "YearGroup", "ClassSection", "Gender",
-        "Emirati_Status", "Inclusion_SEND", "EAL_Status", "Attendance_Pct",
-        "CAT4_Verbal_SAS", "CAT4_NonVerbal_SAS", "CAT4_Quantitative_SAS", "CAT4_Spatial_SAS",
-        "CAT4_Mean_SAS", "CAT4_Overall_Stanine", "Predicted_Math_Grade", "Predicted_Science_Grade",
-        "Predicted_English_Grade", "Term1_Math_Grade", "Term1_Science_Grade", "Term1_English_Grade",
-        "Term2_Math_Grade", "Term2_Science_Grade", "Term2_English_Grade", "Missing_Assignments", "Behaviour_Incidents"
-      ],
+      columns: MASTER_COLUMNS,
       status: "ready",
     },
   ]);
@@ -109,18 +137,11 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
     setActiveFiles([
       {
         id: `file-${Date.now()}`,
-        name: "inside_synthetic_school_data_500.csv",
-        size: 48694,
+        name: "Inside_Demo_UAE_School_Master_Database.xlsx (MASTER)",
+        size: 535110,
         uploadedAt: "Just now",
         rowCount: SAMPLE_STUDENTS.length,
-        columns: [
-          "StudentID", "StudentName", "YearGroup", "ClassSection", "Gender",
-          "Emirati_Status", "Inclusion_SEND", "EAL_Status", "Attendance_Pct",
-          "CAT4_Verbal_SAS", "CAT4_NonVerbal_SAS", "CAT4_Quantitative_SAS", "CAT4_Spatial_SAS",
-          "CAT4_Mean_SAS", "CAT4_Overall_Stanine", "Predicted_Math_Grade", "Predicted_Science_Grade",
-          "Predicted_English_Grade", "Term1_Math_Grade", "Term1_Science_Grade", "Term1_English_Grade",
-          "Term2_Math_Grade", "Term2_Science_Grade", "Term2_English_Grade", "Missing_Assignments", "Behaviour_Incidents"
-        ],
+        columns: MASTER_COLUMNS,
         status: "ready",
       },
     ]);
@@ -221,6 +242,10 @@ export function SessionDataProvider({ children }: { children: React.ReactNode })
         readinessScore,
         sessionMinutesRemaining,
         sessionDeleted,
+        maskStudentNames,
+        toggleMaskStudentNames,
+        getStudentDisplayName,
+        statsDigest,
         answersHistory,
         askExchanges,
         prefilledQuery,

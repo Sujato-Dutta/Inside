@@ -8,7 +8,7 @@ import { AlertCircle, ArrowRight, ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export function StudentDetailsModal() {
-  const { activeModalStudentIds, activeModalTitle, closeStudentModal, students, setPrefilledQuery } =
+  const { activeModalStudentIds, activeModalTitle, closeStudentModal, students, setPrefilledQuery, getStudentDisplayName } =
     useSessionData();
   const router = useRouter();
 
@@ -39,14 +39,14 @@ export function StudentDetailsModal() {
             <div key={stu.id} className="p-3 hover:bg-orange-50/40 transition flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-orange-50 text-orange-600 border border-orange-200 flex items-center justify-center font-bold text-[13px] shrink-0">
-                  {stu.name.slice(0, 2).toUpperCase()}
+                  {getStudentDisplayName(stu).slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <div className="text-[13px] font-bold text-[#1C1A17] truncate">
-                    {stu.name}
+                    {getStudentDisplayName(stu)}
                   </div>
                   <div className="text-[12px] text-[#5C5852] flex items-center gap-2">
-                    <span>Year {stu.yearGroup} ({stu.classGroup})</span>
+                    <span>{stu.yearGroupStr || `Year ${stu.yearGroup}`} ({stu.classGroup})</span>
                     <span>•</span>
                     <span>Att: <strong className={stu.attendanceRate < 85 ? "text-red-600" : "text-[#1C1A17]"}>{stu.attendanceRate}%</strong></span>
                   </div>

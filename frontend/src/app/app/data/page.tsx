@@ -10,7 +10,7 @@ import { AlertTriangle, CheckCircle2, Database, Download, FileCheck, FileSpreads
 const BASE_OPTIONS = [100, 80, 60, 50, 40];
 
 export default function DataHubPage() {
-  const { activeFiles, students, deleteSessionDataNow, commitSanitizedDataset } = useSessionData();
+  const { activeFiles, students, deleteSessionDataNow, commitSanitizedDataset, loadSampleDataset } = useSessionData();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -20,6 +20,12 @@ export default function DataHubPage() {
   const [repairOpen, setRepairOpen] = useState(false);
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [error, setError] = useState("");
+
+  const handleResetToMasterDemo = () => {
+    setStaged(null);
+    setError("");
+    loadSampleDataset();
+  };
 
   const totalSize = useMemo(() => (staged?.files || activeFiles).reduce((sum, file) => sum + file.size, 0), [staged, activeFiles]);
   const processFiles = async (files: File[]) => {
@@ -72,7 +78,10 @@ export default function DataHubPage() {
           <h1 className="text-3xl font-extrabold tracking-tight">Data Hub</h1>
           <p className="mt-1 max-w-2xl text-[14px] text-[#5C5852]">Join MIS, marks, SEND, and attendance files by pupil reference. Source files are read in this browser session.</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={downloadAudit} disabled={!staged} icon={<Download className="h-4 w-4" />}>Download hygiene log</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={handleResetToMasterDemo} icon={<RefreshCw className="h-4 w-4 text-orange-600" />}>Reset to 1,300-Student Master Demo</Button>
+          <Button variant="secondary" size="sm" onClick={downloadAudit} disabled={!staged} icon={<Download className="h-4 w-4" />}>Download hygiene log</Button>
+        </div>
       </div>
       <div onDragEnter={(e) => { e.preventDefault(); setDragging(true); }} onDragOver={(e) => e.preventDefault()} onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); processFiles(Array.from(e.dataTransfer.files)); }}
@@ -80,7 +89,10 @@ export default function DataHubPage() {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-200 bg-orange-50 text-orange-600"><Upload className="h-5 w-5" /></div>
         <h2 className="mt-4 text-lg font-extrabold">Drop all source files together</h2>
         <p className="mx-auto mt-1 max-w-xl text-[13px] text-[#5C5852]">XLSX (all pupil-data sheets), CSV, TSV, delimited TXT, or JSON arrays from school systems. Files stay in this browser session. Legacy XLS, PDFs, and arbitrary documents need conversion to a pupil table first.</p>
-        <Button className="mt-5" variant="primary" onClick={() => inputRef.current?.click()} disabled={processing} icon={<FileSpreadsheet className="h-4 w-4" />}>{processing ? "Validating in memory..." : "Choose multiple files"}</Button>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <Button variant="primary" onClick={() => inputRef.current?.click()} disabled={processing} icon={<FileSpreadsheet className="h-4 w-4" />}>{processing ? "Validating in memory..." : "Choose multiple files"}</Button>
+          <Button variant="secondary" onClick={handleResetToMasterDemo} icon={<RefreshCw className="h-4 w-4 text-orange-600" />}>Reset to 1,300-Student Master Demo</Button>
+        </div>
         {error && <p className="mt-3 text-[13px] font-semibold text-red-700">{error}</p>}
       </div>
       {files.length > 0 && <div className="rounded-3xl border border-[#E3DED4] bg-white p-5 shadow-sm">

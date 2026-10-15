@@ -1,3 +1,17 @@
+export const YEAR_GROUP_ORDER = [
+  'FS1', 'FS2', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6',
+  'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12', 'Year 13'
+] as const;
+
+export const KEY_STAGE_ORDER = ['EYFS', 'KS1', 'KS2', 'KS3', 'KS4', 'Post-16'] as const;
+
+export function formatSafePct(numerator: number, denominator: number, decimals: number = 1): string {
+  if (!denominator || denominator <= 0 || isNaN(denominator) || isNaN(numerator)) {
+    return "N/A (No assessed cohort)";
+  }
+  return `${((numerator / denominator) * 100).toFixed(decimals)}%`;
+}
+
 export interface StudentRecord {
   id: string;
   /** Raw source identifier retained only in volatile browser memory for local joins/lookups. */
@@ -5,22 +19,38 @@ export interface StudentRecord {
   name: string;
   gender: "Male" | "Female" | "Other";
   yearGroup: number;
+  yearGroupStr?: string;
+  phase?: string;
+  keyStage?: string;
   classGroup: string;
-  attendanceRate: number; // e.g. 84.5%
-  mathGrade: number; // 1-9 or score
-  englishGrade: number;
-  scienceGrade: number;
-  overallScore: number;
+  tutorGroup?: string;
+  nationality?: string;
+  attendanceRate: number; // e.g. 84.5% or Att_Overall_Pct
+  attT1Pct?: number;
+  attT2Pct?: number;
+  persistentAbsence?: boolean;
+  sessionsPossible?: number;
+  absentSessionsAuthorised?: number;
+  absentSessionsUnauthorised?: number;
+  lateCount?: number;
+  mathGrade?: number | null; // 1-9 or score
+  englishGrade?: number | null;
+  scienceGrade?: number | null;
+  overallScore?: number | null;
   senStatus: boolean; // Special Educational Needs
-  inclusionSend?: string; // Dyslexia, ADHD, Autism, Dyscalculia, Dyspraxia, None
+  inclusionSend?: string; // Cognition and Learning, Communication and Interaction, SEMH, Sensory and Physical, or None
+  sendSupportLevel?: string | null;
+  iepInPlace?: boolean;
   emiratiStatus?: boolean;
   ealStatus?: boolean;
+  newJoiner?: boolean;
+  giftedTalented?: boolean;
   pupilPremium?: boolean; // Optional backward compatibility
   cat4Verbal?: number;
   cat4NonVerbal?: number;
   cat4Quantitative?: number;
   cat4Spatial?: number;
-  cat4Mean?: number;
+  cat4Mean?: number | null;
   cat4_sas?: number | null;
   /** Presence flags preserve valid zero marks without treating missing marks as zero. */
   assessmentPresent?: { math: boolean; english: boolean; science: boolean };
@@ -29,15 +59,38 @@ export interface StudentRecord {
   predictedMathGrade?: number;
   predictedScienceGrade?: number;
   predictedEnglishGrade?: number;
-  term1MathGrade?: number;
-  term1ScienceGrade?: number;
-  term1EnglishGrade?: number;
-  term2MathGrade?: number;
-  term2ScienceGrade?: number;
-  term2EnglishGrade?: number;
+  term1MathGrade?: number | null;
+  term1ScienceGrade?: number | null;
+  term1EnglishGrade?: number | null;
+  term2MathGrade?: number | null;
+  term2ScienceGrade?: number | null;
+  term2EnglishGrade?: number | null;
+  avgCoreT1?: number | null;
+  avgCoreT2?: number | null;
+  targetAvgCore?: number | null;
+  progressT1T2?: number | null;
+  aboveTargetT2?: boolean;
+  arabicTrack?: "Arabic A" | "Arabic B" | string;
+  arabicGrade?: number | null;
+  arabic_T1?: number | null;
+  arabic_T2?: number | null;
+  islamicEducationTaken?: boolean;
+  islamicGrade?: number | null;
+  islamicEd_T1?: number | null;
+  islamicEd_T2?: number | null;
+  socialStudies_T1?: number | null;
+  socialStudies_T2?: number | null;
+  moralEd_T1?: number | null;
+  moralEd_T2?: number | null;
   gradeDrop?: number;
   missingAssignments?: number;
   behaviourIncidents?: number;
+  meritPoints?: number;
+  interventionProgramme?: string;
+  post16Route?: string | null;
+  post16AvgUcasPtsT2?: number | null;
+  eyfsGld?: boolean | null;
+  weeklyAttendance?: number[];
   targetGrade?: number;
   attainmentGap?: number;
   riskLevel: "Low" | "Moderate" | "High";

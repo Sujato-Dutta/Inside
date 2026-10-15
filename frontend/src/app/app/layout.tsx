@@ -16,11 +16,13 @@ import {
   Clock,
   User,
   LogOut,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 function AppNavbar() {
   const pathname = usePathname();
-  const { sessionMinutesRemaining, activeFiles, students, sessionDeleted } = useSessionData();
+  const { sessionMinutesRemaining, activeFiles, students, sessionDeleted, maskStudentNames, toggleMaskStudentNames } = useSessionData();
 
   const navItems = [
     { label: "Home", href: "/app", icon: Home },
@@ -87,6 +89,27 @@ function AppNavbar() {
             </div>
           )}
 
+          {/* Boardroom Privacy Toggle */}
+          <button
+            type="button"
+            onClick={toggleMaskStudentNames}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+              maskStudentNames
+                ? "bg-amber-100 text-amber-900 border-amber-300 shadow-xs"
+                : "bg-[#F9F6F0] text-[#5C5852] border-[#E3DED4] hover:border-orange-300 hover:text-[#1C1A17]"
+            }`}
+            title="Mask student names for boardroom or inspection projection"
+          >
+            {maskStudentNames ? (
+              <EyeOff className="w-3.5 h-3.5 text-amber-700" />
+            ) : (
+              <Eye className="w-3.5 h-3.5 text-[#5C5852]" />
+            )}
+            <span className="hidden sm:inline">
+              {maskStudentNames ? "Names Masked" : "Mask Student Names"}
+            </span>
+          </button>
+
           {/* Instructor Profile Badge */}
           <div className="flex items-center gap-2.5 pl-2 border-l border-[#E3DED4]">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-white flex items-center justify-center font-bold text-[13px] shadow-xs">
@@ -119,7 +142,7 @@ function AppNavbar() {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5 text-emerald-700">
               <Database className="h-3.5 w-3.5" />
-              Volatile RAM: {students.length} records
+              Volatile RAM: {students.length.toLocaleString()} records
             </span>
             <span>{activeFiles.length} source file{activeFiles.length === 1 ? "" : "s"}</span>
           </div>

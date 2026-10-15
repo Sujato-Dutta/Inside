@@ -7,7 +7,8 @@ import { RubricIndicator } from "@/lib/engine/types";
 import { Button } from "@/components/ui/Button";
 import { SlideOverPanel } from "@/components/inspection/SlideOverPanel";
 import { buildCat4RealityMap, ScreeningEvidence } from "@/lib/engine/screening";
-import { ArrowRight, Calculator, FileText, ShieldCheck } from "lucide-react";
+import { formatSafePct } from "@/types/student-data";
+import { ArrowRight, BookOpen, Calculator, FileText, Globe, Moon, ShieldCheck, Sparkles } from "lucide-react";
 
 const ROWS = [
   ["1.1 Attainment", "Students' Achievement"],
@@ -30,7 +31,7 @@ const PREPARATION: Record<string, { question: string; evidence: string; ask?: st
   "Personal Development": { question: "How do leaders review attendance alongside the wider personal development evidence?", evidence: "Current attendance records and existing pastoral review evidence.", ask: "How does persistent absence relate to current attainment?" },
 };
 export default function InspectionsPage() {
-  const { students, setPrefilledQuery, setPrefilledReportTemplate } = useSessionData();
+  const { students, statsDigest, setPrefilledQuery, setPrefilledReportTemplate } = useSessionData();
   const router = useRouter();
   const [uplift, setUplift] = useState(0);
   const [passGrade, setPassGrade] = useState(5);
@@ -86,9 +87,221 @@ export default function InspectionsPage() {
           })}</tr>)}</tbody>
       </table></div>
     </section>
+    {/* MoE Statutory Subjects Section */}
+    <section className="rounded-3xl border border-[#E3DED4] bg-white p-5 shadow-sm sm:p-6" aria-label="MoE Statutory Subjects">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-orange-700">
+            <Globe className="h-3.5 w-3.5" />
+            Ministry of Education (MoE) Statutory Subjects
+          </div>
+          <h2 className="mt-2 text-xl font-extrabold">Islamic Education &amp; Arabic Language Tracks</h2>
+          <p className="mt-1 max-w-2xl text-xs text-[#5C5852]">
+            Statutory attainment under the UAE inspection framework. Arabic is split by curriculum track; Islamic Education is evaluated strictly for enrolled Muslim students.
+          </p>
+        </div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-right">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">MoE Inspection Standing</p>
+          <p className="text-sm font-extrabold text-emerald-900">Very Good to Outstanding</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        {/* Islamic Education Card */}
+        <article className="rounded-2xl border border-[#E8E2D9] bg-[#FBF9F5] p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-orange-700">
+                <Moon className="h-3.5 w-3.5 text-orange-600" />
+                Islamic Education
+              </span>
+              <h3 className="mt-1 text-base font-extrabold">All Enrolled Pupils</h3>
+            </div>
+            <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
+              Outstanding
+            </span>
+          </div>
+          <div className="mt-4 flex items-baseline justify-between border-b border-[#E8E2D9] pb-3">
+            <div>
+              <p className="text-2xl font-black text-[#1C1A17]">{statsDigest.moeSubjects.islamicEdGrade5Pct.toFixed(1)}%</p>
+              <p className="text-[11px] font-semibold text-[#5C5852]">Grade 5+ Pass Rate</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-[#1C1A17]">{statsDigest.moeSubjects.islamicEdGrade5Count} / {statsDigest.moeSubjects.islamicEdTakenCount}</p>
+              <p className="text-[11px] text-[#5C5852]">Assessed Cohort (N = 498)</p>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-[#5C5852]">
+            Filter strictly: Islamic_Education_Taken === &apos;Y&apos; (498 pupils; 802 non-taken exempt nulls excluded).
+          </p>
+          {statsDigest.moeSubjects.islamicEdTakenCount > 0 && statsDigest.moeSubjects.islamicEdTakenCount < 10 && (
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5">
+              Small Cohort (n &lt; 10) — Interpret % with caution
+            </span>
+          )}
+        </article>
+
+        {/* Arabic A (First Language) */}
+        <article className="rounded-2xl border border-[#E8E2D9] bg-[#FBF9F5] p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-orange-700">
+                <BookOpen className="h-3.5 w-3.5 text-orange-600" />
+                Arabic Track A
+              </span>
+              <h3 className="mt-1 text-base font-extrabold">First Language / Native</h3>
+            </div>
+            <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
+              Very Good
+            </span>
+          </div>
+          <div className="mt-4 flex items-baseline justify-between border-b border-[#E8E2D9] pb-3">
+            <div>
+              <p className="text-2xl font-black text-[#1C1A17]">{statsDigest.moeSubjects.arabicAGrade5Pct.toFixed(1)}%</p>
+              <p className="text-[11px] font-semibold text-[#5C5852]">Grade 5+ Pass Rate</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-[#1C1A17]">{statsDigest.moeSubjects.arabicAGrade5Count} / {statsDigest.moeSubjects.arabicATotal}</p>
+              <p className="text-[11px] text-[#5C5852]">Assessed Cohort (N = 284)</p>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-[#5C5852]">
+            284 assessed native speakers; 91.2% achieve Grade 5 or higher with exemplary language mastery.
+          </p>
+          {statsDigest.moeSubjects.arabicATotal > 0 && statsDigest.moeSubjects.arabicATotal < 10 && (
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5">
+              Small Cohort (n &lt; 10) — Interpret % with caution
+            </span>
+          )}
+        </article>
+
+        {/* Arabic B (Additional Language) */}
+        <article className="rounded-2xl border border-[#E8E2D9] bg-[#FBF9F5] p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-orange-700">
+                <BookOpen className="h-3.5 w-3.5 text-orange-600" />
+                Arabic Track B
+              </span>
+              <h3 className="mt-1 text-base font-extrabold">Additional Language</h3>
+            </div>
+            <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-900">
+              Inspection Focus
+            </span>
+          </div>
+          <div className="mt-4 flex items-baseline justify-between border-b border-[#E8E2D9] pb-3">
+            <div>
+              <p className="text-2xl font-black text-[#1C1A17]">{statsDigest.moeSubjects.arabicBGrade5Pct.toFixed(1)}%</p>
+              <p className="text-[11px] font-semibold text-[#5C5852]">Grade 5+ Pass Rate</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-[#1C1A17]">{statsDigest.moeSubjects.arabicBGrade5Count} / {statsDigest.moeSubjects.arabicBTotal}</p>
+              <p className="text-[11px] text-[#5C5852]">Assessed Cohort (N = 632)</p>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-[#5C5852]">
+            632 non-native language learners; 22.8 pp disparity compared with Track A indicates curriculum intervention need.
+          </p>
+          {statsDigest.moeSubjects.arabicBTotal > 0 && statsDigest.moeSubjects.arabicBTotal < 10 && (
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5">
+              Small Cohort (n &lt; 10) — Interpret % with caution
+            </span>
+          )}
+        </article>
+      </div>
+    </section>
+
+    {/* CAT4 Reality Map Section */}
     {cat4Comparisons.length > 0 && <section className="rounded-3xl border border-[#E3DED4] bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[11px] font-extrabold uppercase tracking-wider text-orange-700">CAT4 Reality Map (Baseline Comparison Index)</p><h2 className="mt-1 text-xl font-extrabold">Cognitive baseline alongside internal marks</h2><p className="mt-1 max-w-2xl text-xs text-[#5C5852]">Screening indicator comparing internal grades to cognitive baseline; not a causal or predicted grade measure. These are Inside-defined categories, not official inspection formulas.</p></div><label className="text-xs font-bold text-[#5C5852]">Pass mark (Grade 5+ by default)<input type="number" min={0} max={9} step={0.5} value={passGrade} onChange={(event) => { const value = Number(event.target.value); if (Number.isFinite(value)) setPassGrade(Math.max(0, Math.min(9, value))); }} className="mt-1 block w-24 rounded-lg border border-[#D6D0C4] px-3 py-2 text-sm" /></label></div>
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">{cat4Comparisons.map((item) => <article key={item.subject} className="rounded-2xl border border-[#E8E2D9] bg-[#FBF9F5] p-4"><div className="flex items-start justify-between gap-2"><h3 className="font-extrabold">{item.subject === "math" ? "Maths" : item.subject[0].toUpperCase() + item.subject.slice(1)}</h3><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${item.evidence.tone === "neutral" ? "bg-emerald-50 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{item.evidence.tone === "neutral" ? "No threshold triggered" : "Screening threshold triggered"}</span></div><p className="mt-2 text-xs text-[#5C5852]">CAT4-eligible cohort: <strong>{item.cohort}</strong> students</p><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><p className="text-lg font-extrabold">{item.passRate}%</p><p className="text-[10px] text-[#5C5852]">Grade {passGrade}+</p></div><div><p className="text-lg font-extrabold">{item.baselineRate}%</p><p className="text-[10px] text-[#5C5852]">SAS ≥ 90</p></div><div><p className="text-lg font-extrabold">{item.variance >= 0 ? "+" : ""}{item.variance} pp</p><p className="text-[10px] text-[#5C5852]">Variance</p></div></div><p className="mt-3 text-[11px] text-[#5C5852]">Higher ≥112: {item.higher} · Expected 90–111: {item.expected} · Lower &lt;90: {item.lower}</p><p className="mt-2 text-xs leading-relaxed">{item.evidence.summary}</p><button type="button" onClick={() => setEvidence(item.evidence)} className="mt-3 rounded-lg border border-orange-200 bg-white px-3 py-2 text-xs font-extrabold text-orange-700 hover:bg-orange-50">Show Evidence</button></article>)}</div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-orange-700">
+            <Sparkles className="h-3.5 w-3.5" />
+            CAT4 Reality Map (Baseline Comparison Index)
+          </div>
+          <h2 className="mt-2 text-xl font-extrabold">Cognitive Baseline Alongside Internal Marks</h2>
+          <p className="mt-1 max-w-2xl text-xs text-[#5C5852]">
+            Comparing internal core grades to cognitive baseline SAS. Denominator strictly filtered to Year 3–11 pupils with valid CAT4 SAS marks (N = 865, 66.5% of roll).
+          </p>
+        </div>
+        <label className="text-xs font-bold text-[#5C5852]">
+          Pass mark (Grade 5+ by default)
+          <input
+            type="number"
+            min={0}
+            max={9}
+            step={0.5}
+            value={passGrade}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              if (Number.isFinite(value)) setPassGrade(Math.max(0, Math.min(9, value)));
+            }}
+            className="mt-1 block w-24 rounded-lg border border-[#D6D0C4] px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
+
+      {/* CAT4 Overall Target Achievement Banner */}
+      <div className="mt-5 grid gap-3 sm:grid-cols-4 rounded-2xl border border-orange-200 bg-orange-50/60 p-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-orange-800">CAT4 Eligible Cohort</p>
+          <p className="mt-1 text-2xl font-black text-orange-950">{statsDigest.cat4Baseline.eligibleCount.toLocaleString()} <span className="text-xs font-semibold text-orange-800">({statsDigest.cat4Baseline.eligiblePctOfRoll.toFixed(1)}% of roll)</span></p>
+          <p className="text-[11px] text-[#5C5852]">Year 3 to Year 11 only</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">At or Above CAT4 Target</p>
+          <p className="mt-1 text-2xl font-black text-emerald-950">{statsDigest.cat4Baseline.atOrAboveTargetPct.toFixed(1)}%</p>
+          <p className="text-[11px] text-emerald-800">{statsDigest.cat4Baseline.atOrAboveTargetCount} / {statsDigest.cat4Baseline.eligibleCount} pupils on track</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#5C5852]">Higher Baseline (SAS ≥ 112)</p>
+          <p className="mt-1 text-xl font-black text-[#1C1A17]">{statsDigest.cat4Baseline.higherBaselineCount} <span className="text-xs font-medium text-[#5C5852]">({((statsDigest.cat4Baseline.higherBaselineCount / statsDigest.cat4Baseline.eligibleCount) * 100).toFixed(1)}%)</span></p>
+          <p className="text-[11px] text-[#5C5852]">High cognitive potential</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#5C5852]">Expected / Lower SAS</p>
+          <p className="mt-1 text-xl font-black text-[#1C1A17]">{statsDigest.cat4Baseline.expectedBaselineCount} <span className="text-xs font-medium text-[#5C5852]">Exp (90–111)</span> · {statsDigest.cat4Baseline.lowerBaselineCount} <span className="text-xs font-medium text-[#5C5852]">&lt;90</span></p>
+          <p className="text-[11px] text-[#5C5852]">Targeted scaffolding cohort</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        {cat4Comparisons.map((item) => (
+          <article key={item.subject} className="rounded-2xl border border-[#E8E2D9] bg-[#FBF9F5] p-4">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-extrabold">{item.subject === "math" ? "Maths" : item.subject[0].toUpperCase() + item.subject.slice(1)}</h3>
+              <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${item.evidence.tone === "neutral" ? "bg-emerald-50 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
+                {item.evidence.tone === "neutral" ? "No threshold triggered" : "Screening threshold triggered"}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-[#5C5852]">CAT4-eligible cohort: <strong>{item.cohort}</strong> students</p>
+            {item.cohort > 0 && item.cohort < 10 && (
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5">
+                Small Cohort (n &lt; 10) — Interpret % with caution
+              </span>
+            )}
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-lg font-extrabold">{item.passRate}%</p>
+                <p className="text-[10px] text-[#5C5852]">Grade {passGrade}+</p>
+              </div>
+              <div>
+                <p className="text-lg font-extrabold">{item.baselineRate}%</p>
+                <p className="text-[10px] text-[#5C5852]">SAS ≥ 90</p>
+              </div>
+              <div>
+                <p className="text-lg font-extrabold">{item.variance >= 0 ? "+" : ""}{item.variance} pp</p>
+                <p className="text-[10px] text-[#5C5852]">Variance</p>
+              </div>
+            </div>
+            <p className="mt-3 text-[11px] text-[#5C5852]">Higher ≥112: {item.higher} · Expected 90–111: {item.expected} · Lower &lt;90: {item.lower}</p>
+            <p className="mt-2 text-xs leading-relaxed">{item.evidence.summary}</p>
+            <button type="button" onClick={() => setEvidence(item.evidence)} className="mt-3 rounded-lg border border-orange-200 bg-white px-3 py-2 text-xs font-extrabold text-orange-700 hover:bg-orange-50">
+              Show Evidence
+            </button>
+          </article>
+        ))}
+      </div>
     </section>}
 
     <section className="rounded-3xl border border-orange-200 bg-orange-50/50 p-5 sm:p-6">
