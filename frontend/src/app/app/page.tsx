@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSessionData } from "@/context/SessionDataContext";
-import { StudentRecord } from "@/types/student-data";
+import { StudentRecord, displayProgress } from "@/types/student-data";
 import { Button } from "@/components/ui/Button";
 import { SlideOverPanel } from "@/components/inspection/SlideOverPanel";
 import { buildInspectionFlanks, ScreeningEvidence } from "@/lib/engine/screening";
@@ -61,9 +61,18 @@ function deriveHomeInsights(students: StudentRecord[], attainment: number): Insi
   const insights: Insight[] = [];
   const send = students.filter(sendStatus);
   const peers = students.filter((student) => !sendStatus(student));
-  if (send.length && peers.length) {
-    const sendEnglish = round(average(send.map((student) => student.term2EnglishGrade ?? student.englishGrade)));
-    const peerEnglish = round(average(peers.map((student) => student.term2EnglishGrade ?? student.englishGrade)));
+
+  // Filter strictly to assessed rows with valid non-zero English grades (Fix 1)
+  const assessedSendEng = send
+    .map((r) => r.term2EnglishGrade ?? r.englishGrade)
+    .filter((g) => g !== null && g !== undefined && !isNaN(Number(g)) && Number(g) > 0);
+  const assessedPeerEng = peers
+    .map((r) => r.term2EnglishGrade ?? r.englishGrade)
+    .filter((g) => g !== null && g !== undefined && !isNaN(Number(g)) && Number(g) > 0);
+
+  if (assessedSendEng.length && assessedPeerEng.length) {
+    const sendEnglish = round(average(assessedSendEng));
+    const peerEnglish = round(average(assessedPeerEng));
     const gap = round(peerEnglish - sendEnglish);
     if (Math.abs(gap) >= 0.3) insights.push({ label: "Inclusion", title: "English attainment gap", detail: `SEND pupils average Grade ${sendEnglish.toFixed(1)}; peers average Grade ${peerEnglish.toFixed(1)}.`, tone: gap > 0 ? "amber" : "green", query: "Compare SEND and non-SEND English attainment." });
   }
@@ -82,9 +91,18 @@ function deriveHomeInsights(students: StudentRecord[], attainment: number): Insi
   const boys = students.filter((student) => student.gender === "Male");
   const girls = students.filter((student) => student.gender === "Female");
   if (boys.length && girls.length) {
-    const boysScience = round(average(boys.map((student) => student.term2ScienceGrade ?? student.scienceGrade)));
-    const girlsScience = round(average(girls.map((student) => student.term2ScienceGrade ?? student.scienceGrade)));
-    if (Math.abs(girlsScience - boysScience) >= 0.3) insights.push({ label: "Cohort gap", title: `${Math.abs(girlsScience - boysScience).toFixed(1)} grade Science gender gap`, detail: `Boys average Grade ${boysScience.toFixed(1)}; girls average Grade ${girlsScience.toFixed(1)}.`, tone: "amber", query: "Show the current Science attainment gap by gender." });
+    const boysAssessedSci = boys
+      .map((r) => r.term2ScienceGrade ?? r.scienceGrade)
+      .filter((g) => g !== null && g !== undefined && !isNaN(Number(g)) && Number(g) > 0);
+    const girlsAssessedSci = girls
+      .map((r) => r.term2ScienceGrade ?? r.scienceGrade)
+      .filter((g) => g !== null && g !== undefined && !isNaN(Number(g)) && Number(g) > 0);
+
+    if (boysAssessedSci.length && girlsAssessedSci.length) {
+      const boysScience = round(average(boysAssessedSci));
+      const girlsScience = round(average(girlsAssessedSci));
+      if (Math.abs(girlsScience - boysScience) >= 0.3) insights.push({ label: "Cohort gap", title: `${Math.abs(girlsScience - boysScience).toFixed(1)} grade Science gender gap`, detail: `Boys average Grade ${boysScience.toFixed(1)}; girls average Grade ${girlsScience.toFixed(1)}.`, tone: "amber", query: "Show the current Science attainment gap by gender." });
+    }
   }
   return insights;
 }
@@ -172,7 +190,7 @@ export default function AppHomePage() {
 
   const kpis = [
     { label: "Whole-School Attainment", value: assessed.length ? `${attainment}%` : "No core results", detail: `${assessed.length.toLocaleString()} assessed pupils (Year 1–11) · ${total.toLocaleString()} on roll`, icon: Target, query: "Compare whole-school attainment across English, Math, and Science.", tone: "orange" },
-    { label: "Inclusion Progress Delta", value: sendProgress.length ? `${sendDelta >= 0 ? "+" : ""}${sendDelta.toFixed(2)} grades` : "No two-term data", detail: `${sendProgress.length} Students of Determination with two term results`, icon: TrendingUp, query: "Show attainment and progress deltas for Students of Determination compared to non-SEND peers.", tone: "emerald" },
+    { label: "Inclusion Progress Delta", value: sendProgress.length && displayProgress(sendDelta) !== '-' ? `${sendDelta >= 0 ? "+" : ""}${displayProgress(sendDelta)} grades` : "No two-term data", detail: `${sendProgress.length} Students of Determination with two term results`, icon: TrendingUp, query: "Show attainment and progress deltas for Students of Determination compared to non-SEND peers.", tone: "emerald" },
     { label: "Persistent Absence Rate", value: `${pct(persistent.length, total)}%`, detail: `${persistent.length} pupils below 90% attendance`, icon: AlertTriangle, query: "Identify Students of Determination flagged for Persistent Absence and calculate attainment impact.", tone: "red" },
   ];
   const watchlist: Insight[] = [

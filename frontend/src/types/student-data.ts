@@ -12,6 +12,10 @@ export function formatSafePct(numerator: number, denominator: number, decimals: 
   return `${((numerator / denominator) * 100).toFixed(decimals)}%`;
 }
 
+export const displayProgress = (val: number | null | undefined): string => 
+  (val === null || val === undefined || isNaN(Number(val))) ? '-' : Number(val).toFixed(2);
+
+
 export interface StudentRecord {
   id: string;
   /** Raw source identifier retained only in volatile browser memory for local joins/lookups. */

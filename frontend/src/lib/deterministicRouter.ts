@@ -1,4 +1,4 @@
-import { StudentRecord } from "@/types/student-data";
+import { StudentRecord, displayProgress } from "@/types/student-data";
 import { SchoolStatsDigest } from "@/lib/deterministicDigest";
 
 export interface InspectionBriefingCard {
@@ -405,7 +405,7 @@ export function resolveDeterministicQuery(
         s.classGroup,
         s.inclusionSend ?? "SEMH",
         s.sendSupportLevel ?? "School Support",
-        s.progressT1T2 !== null && s.progressT1T2 !== undefined ? (s.progressT1T2 > 0 ? `+${s.progressT1T2.toFixed(2)}` : s.progressT1T2.toFixed(2)) : "0.00",
+        displayProgress(s.progressT1T2) !== '-' && Number(s.progressT1T2) > 0 ? `+${displayProgress(s.progressT1T2)}` : displayProgress(s.progressT1T2),
         s.avgCoreT2 !== null && s.avgCoreT2 !== undefined ? s.avgCoreT2.toFixed(1) : "-",
         `${s.attendanceRate}%`,
       ]);
@@ -549,7 +549,7 @@ export function resolveDeterministicQuery(
         s.term2EnglishGrade ?? "-",
         s.term1MathGrade ?? "-",
         s.term2MathGrade ?? "-",
-        s.progressT1T2 !== null && s.progressT1T2 !== undefined ? (s.progressT1T2 > 0 ? `+${s.progressT1T2.toFixed(2)}` : s.progressT1T2.toFixed(2)) : "-",
+        displayProgress(s.progressT1T2) !== '-' && Number(s.progressT1T2) > 0 ? `+${displayProgress(s.progressT1T2)}` : displayProgress(s.progressT1T2),
         `${s.attendanceRate}%`,
       ]);
 
@@ -760,7 +760,7 @@ export function resolveDeterministicQuery(
         s.yearGroupStr || `Year ${s.yearGroup}`,
         s.classGroup,
         s.nationality ?? "-",
-        s.progressT1T2 !== null && s.progressT1T2 !== undefined ? (s.progressT1T2 > 0 ? `+${s.progressT1T2.toFixed(2)}` : s.progressT1T2.toFixed(2)) : "-",
+        displayProgress(s.progressT1T2) !== '-' && Number(s.progressT1T2) > 0 ? `+${displayProgress(s.progressT1T2)}` : displayProgress(s.progressT1T2),
         s.avgCoreT2 !== null && s.avgCoreT2 !== undefined ? s.avgCoreT2.toFixed(1) : "-",
         `${s.attendanceRate}%`,
       ]);
